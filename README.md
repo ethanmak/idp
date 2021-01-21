@@ -1,2 +1,1 @@
-# idp
-Integrated Design Project Lent 2021
+# Integrated Design Project Lent 2021
