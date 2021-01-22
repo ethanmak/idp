@@ -14,6 +14,6 @@ if __name__ == '__main__':
     setup()
     while robot.step():
         print("in loop")
-        robot.set_motor_velocity(50, 50)
+        robot.set_motor_torque(0.01,-0.01)
         print(robot.get_gps_position())
     exit()

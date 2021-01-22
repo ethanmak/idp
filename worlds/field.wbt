@@ -208,5 +208,5 @@ DEF RED_ROBOT TwoWheelRobot {
   translation 1 0.05 1
   rotation 0 1 0 3.14
   name "red"
-  controller "<extern>"
+  controller "void"
 }

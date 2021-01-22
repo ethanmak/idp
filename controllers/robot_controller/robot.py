@@ -21,7 +21,7 @@ class Robot:
     def step(self):
         return self._robot.step(self._timestep) != -1
 
-    def set_motor_power(self, left_power, right_power):
+    def set_motor_torque(self, left_power, right_power):
         self.leftMotor.setTorque(left_power)
         self.rightMotor.setTorque(right_power)
 
