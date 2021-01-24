@@ -5,15 +5,14 @@ robot = None # type: Robot
 def setup():
     global robot
     robot = Robot(controller.Robot())
+    robot.init_motor_velocity_control()
 
 def exit():
     pass
 
 if __name__ == '__main__':
-    print("in main")
     setup()
     while robot.step():
-        print("in loop")
-        robot.set_motor_torque(0.01,-0.01)
-        print(robot.get_gps_position())
+        robot.set_motor_velocity(1, -1)
+        print(robot.get_color_sensor_value())
     exit()

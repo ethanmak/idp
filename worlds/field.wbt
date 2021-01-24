@@ -18,8 +18,8 @@ WorldInfo {
   ]
 }
 Viewpoint {
-  orientation -0.13707450033171378 -0.9173703503766452 -0.37368733134619686 2.4810643242994255
-  position -2.780465900897366 3.779930025246529 -3.361299308514618
+  orientation -0.459944621262837 -0.7555396154877643 -0.46648776489848776 1.85199752618632
+  position -3.1736973028290913 6.370731995073507 0.05432058315271093
 }
 TexturedBackground {
 }
@@ -203,10 +203,14 @@ DEF BLUE_ROBOT TwoWheelRobot {
   colour 0 0 1
   name "blue"
   controller "<extern>"
+  emitChannel 0
+  receiveChannel 1
 }
 DEF RED_ROBOT TwoWheelRobot {
   translation 1 0.05 1
   rotation 0 1 0 3.14
   name "red"
-  controller "void"
+  controller "<extern>"
+  emitChannel 1
+  receiveChannel 0
 }

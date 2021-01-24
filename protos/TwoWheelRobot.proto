@@ -4,6 +4,8 @@ PROTO TwoWheelRobot [
   field SFColor colour 1 0 0
   field SFString name "robot"
   field SFString controller "<extern>"
+  field SFInt32 emitChannel 0
+  field SFInt32 receiveChannel 1
 ]
 {
 Robot {
@@ -136,6 +138,16 @@ Robot {
 
     DEF GPS GPS {
       name "gps"
+    }
+
+    DEF EMITTER Emitter {
+      name "emitter"
+      channel IS emitChannel
+    }
+
+    DEF RECEIVER Receiver {
+      name "receiver"
+      channel IS receiveChannel
     }
   ]
   boundingObject USE BODY
