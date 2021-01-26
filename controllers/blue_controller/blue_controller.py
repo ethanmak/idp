@@ -19,7 +19,7 @@ depositBox = None
 def setup():
     global robot, depositBox
     robot = Robot(controller.Robot())
-    robot.init_motor_velocity_control()
+    robot._init_motor_velocity_control()
     robot.stop_motors()
     robot.radio.sender.setChannel(sendChannel)
     robot.radio.receiver.setChannel(receiveChannel)
@@ -35,6 +35,10 @@ def process_radio_signals():
             continue
         if data.find('UPDATE:') != -1:
             redRobotData.parse(data)
+        elif data.find('COLOR') != -1:
+            pass
+        elif data.find('BLOCK') != -1:
+            pass
 
 def broadcast_update():
     robot.radio.send('UPDATE:' + repr(blueRobotData))
@@ -43,21 +47,21 @@ def logic_state_machine():
     global currentLogicState
     if currentLogicState is None and movementQueue.empty():
         currentLogicState = logicQueue.get()
-    if currentLogicState == LogicState.CAPTURE:
+    if currentLogicState == LogicCommand.CAPTURE:
         movementQueue.put((RobotCommand.OPEN,))
         movementQueue.put((RobotCommand.TRAVEL, (1, 1)))
         movementQueue.put((RobotCommand.CLOSE,))
-    elif currentLogicState == LogicState.SEARCH:
+    elif currentLogicState == LogicCommand.SEARCH:
         movementQueue.put((RobotCommand.SWEEP,))
-    elif currentLogicState == LogicState.TRAVEL:
+    elif currentLogicState == LogicCommand.TRAVEL:
         movementQueue.put((RobotCommand.TURN, 100))
         movementQueue.put((RobotCommand.POINT, (1,1)))
-    elif currentLogicState == LogicState.DEPOSIT:
+    elif currentLogicState == LogicCommand.DEPOSIT:
         movementQueue.put((RobotCommand.OPEN,))
         movementQueue.put((RobotCommand.FORWARD, - 0.1))
         movementQueue.put((RobotCommand.CLOSE,))
         movementQueue.put((RobotCommand.FORWARD, 0.1))
-    elif currentLogicState == LogicState.TRAVEL_BACK:
+    elif currentLogicState == LogicCommand.TRAVEL_BACK:
         movementQueue.put((RobotCommand.TURN, 100))
         movementQueue.put((RobotCommand.POINT, depositBox))
     currentLogicState = None
@@ -72,8 +76,9 @@ def movement_state_machine():
             robot.go_forward_distance(target)
         elif currentMovementState == RobotCommand.SWEEP:
             robot.turn_degrees(360, 0.1)
+        elif currentMovementState == RobotCommand.TURN:
+            robot.turn_degrees(target)
     if currentMovementState == RobotCommand.TURN:
-        robot.turn_degrees(target)
         if not robot.is_moving():
             currentMovementState = None
     elif currentMovementState == RobotCommand.FORWARD:
@@ -91,7 +96,6 @@ def movement_state_machine():
 
 if __name__ == '__main__':
     setup()
-    logicQueue.put((LogicState.TRAVEL, np.array()))
     while robot.step():
         process_radio_signals()
         update()

@@ -16,7 +16,7 @@ currentMovementState = None
 def setup():
     global robot
     robot = Robot(controller.Robot())
-    robot.init_motor_velocity_control()
+    robot._init_motor_velocity_control()
     robot.stop_motors()
     robot.radio.sender.setChannel(sendChannel)
     robot.radio.receiver.setChannel(receiveChannel)
@@ -49,18 +49,18 @@ def logic_state_machine():
     global currentLogicState
     if currentLogicState is None and movementQueue.empty():
         currentLogicState = logicQueue.get()
-    if currentLogicState == LogicState.CAPTURE:
+    if currentLogicState == LogicCommand.CAPTURE:
         movementQueue.put((RobotCommand.OPEN,))
         movementQueue.put((RobotCommand.TRAVEL, (1, 1)))
         movementQueue.put((RobotCommand.CLOSE,))
-    elif currentLogicState == LogicState.SEARCH:
+    elif currentLogicState == LogicCommand.SEARCH:
         movementQueue.put((RobotCommand.SWEEP,))
-    elif currentLogicState == LogicState.TRAVEL:
+    elif currentLogicState == LogicCommand.TRAVEL:
         pass
-    elif currentLogicState == LogicState.DEPOSIT:
+    elif currentLogicState == LogicCommand.DEPOSIT:
         movementQueue.put((RobotCommand.OPEN,))
         movementQueue.put()
-    elif currentLogicState == LogicState.TRAVEL_BACK:
+    elif currentLogicState == LogicCommand.TRAVEL_BACK:
         pass
     currentLogicState = None
 
