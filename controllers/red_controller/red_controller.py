@@ -1,31 +1,29 @@
 #red controller (slave controller)
-import controller
 from robot_controller import *
-import queue
+from robot_controller.logic import RobotStateMachine
+from robot_controller.display import FieldDisplay
 
 robot = None  # type: Robot
-blueRobotData = RobotData()
-redRobotData = RobotData()
+blueRobotData = RobotData(position=np.array([1, -1]))
+redRobotData = RobotData(position=np.array([1, 1]))
 sendChannel, receiveChannel = 1, 0
 
-logicQueue = queue.Queue()
-currentLogicState = None
-movementQueue = queue.Queue()
-currentMovementState = None
+stateMachine = None  # type: RobotStateMachine
+
+fieldDisplay = None  # type: FieldDisplay
 
 def setup():
-    global robot
-    robot = Robot(controller.Robot())
-    robot._init_motor_velocity_control()
+    global robot, stateMachine, fieldDisplay
+    robot = Robot(controller.Robot(), redRobotData)
+    robot.init_motor_velocity_control()
     robot.stop_motors()
     robot.radio.sender.setChannel(sendChannel)
     robot.radio.receiver.setChannel(receiveChannel)
+    stateMachine = RobotStateMachine(robot)
 
-def update():
-    redRobotData.position = robot.get_gps_position()
+    fieldDisplay = FieldDisplay(resolution=800, title='Red Robot Field')
 
 def process_radio_signals():
-    global currentLogicState, currentMovementState
     while robot.radio.hasNext():
         data = robot.radio.next()
         if data == '':
@@ -34,69 +32,20 @@ def process_radio_signals():
             blueRobotData.parse(data)
         elif data.find('END') != -1:
             robot.stop_motors()
-            while not movementQueue.empty():
-                movementQueue.get()
-            while not logicQueue.empty():
-                logicQueue.get()
-            currentLogicState = None
-            currentMovementState = None
+            stateMachine.exit()
 
 
 def broadcast_update():
     robot.radio.send('UPDATE:' + repr(redRobotData))
 
-def logic_state_machine():
-    global currentLogicState
-    if currentLogicState is None and movementQueue.empty():
-        currentLogicState = logicQueue.get()
-    if currentLogicState == LogicCommand.CAPTURE:
-        movementQueue.put((RobotCommand.OPEN,))
-        movementQueue.put((RobotCommand.TRAVEL, (1, 1)))
-        movementQueue.put((RobotCommand.CLOSE,))
-    elif currentLogicState == LogicCommand.SEARCH:
-        movementQueue.put((RobotCommand.SWEEP,))
-    elif currentLogicState == LogicCommand.TRAVEL:
-        pass
-    elif currentLogicState == LogicCommand.DEPOSIT:
-        movementQueue.put((RobotCommand.OPEN,))
-        movementQueue.put()
-    elif currentLogicState == LogicCommand.TRAVEL_BACK:
-        pass
-    currentLogicState = None
-
-def movement_state_machine():
-    global currentMovementState, target
-    if currentMovementState is None:
-        command = movementQueue.get()
-        currentMovementState = command[0]
-        target = command[1]
-        if currentMovementState == RobotCommand.FORWARD:  # these sets of if statements are use for movement commands that must be executed only once
-            robot.go_forward_distance(target)
-        elif currentMovementState == RobotCommand.SWEEP:
-            robot.turn_degrees(360, 0.1)
-    if currentMovementState == RobotCommand.TURN:
-        robot.turn_degrees(target)
-        if not robot.is_moving():
-            currentMovementState = None
-    elif currentMovementState == RobotCommand.FORWARD:
-        if not robot.is_moving():
-            currentMovementState = None
-    elif currentMovementState == RobotCommand.POINT:
-        if robot.move_to_target(target):
-            currentMovementState = None
-    elif currentMovementState == RobotCommand.OPEN:
-        if not robot.is_gate_moving():
-            currentMovementState = None
-    elif currentMovementState == RobotCommand.SWEEP:
-        if not robot.is_moving():
-            currentMovementState = None
-
-
 if __name__ == '__main__':
     setup()
     while robot.step():
         process_radio_signals()
-        update()
-        logic_state_machine()
-        movement_state_machine()
+        robot.update()
+        stateMachine.update_logic()
+        stateMachine.update_movement()
         broadcast_update()
+        # print(redRobotData)
+        fieldDisplay.draw(blueRobotData, redRobotData, None)
+    fieldDisplay.exit()

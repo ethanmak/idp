@@ -55,6 +55,8 @@ Robot {
           maxTorque 100
           maxVelocity 10
         }
+        PositionSensor{
+        }
       ]
       endPoint Solid {
         translation 0.06000000000005251 1.4531748733392746e-07 0.04999909020156158
@@ -136,18 +138,22 @@ Robot {
       name "ds_left"
     }
 
-    DEF GPS GPS {
+    GPS {
       name "gps"
     }
 
-    DEF EMITTER Emitter {
+    Emitter {
       name "emitter"
       channel IS emitChannel
     }
 
-    DEF RECEIVER Receiver {
+    Receiver {
       name "receiver"
       channel IS receiveChannel
+    }
+
+    Compass {
+      name "compass"
     }
   ]
   boundingObject USE BODY

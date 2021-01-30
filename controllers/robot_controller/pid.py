@@ -13,11 +13,12 @@ class PIDController:
         error = self.target - value
         self.D = (error * self.kP - self.P) * self.kD
         self.P = error * self.kP
-        if error <= self.threshold:
+        if abs(error) <= self.threshold:
             self.I = 0
         else:
             self.I += self.P
 
+        # print(self.P, self.I, self.D)
         return self.P + self.I * self.kI + self.D
 
     def reset(self):

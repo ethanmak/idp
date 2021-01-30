@@ -2,89 +2,91 @@ from .utils import *
 import queue
 from .robot import Robot
 from .command import *
+from .field import Field
 
-class MovementStateMachine:
-    def __init__(self, robot: Robot):
+_blueDeposit = np.array([])
+_redDeposit = np.array([])
+
+
+class RobotStateMachine:
+    def __init__(self, robot: Robot, field: Field = Field()):
+        self.logicQueue = queue.Queue()
         self.movementQueue = queue.Queue()
         self.currentMovementState = None
-        self.robot = robot
+        self.currentLogicState = None
         self.target = None
+        self.prev_state = None
+        self.robot = robot
+        self.field = field
         
-    def reset_state(self):
-        self.currentMovementState = None
+    def movement_queue(self, val):
+        self.movementQueue.put(val)
 
-    def update(self):
+    def queue(self, val):
+        self.logicQueue.put(val)
+
+    def update_movement(self):
         if self.currentMovementState is None and not self.movementQueue.empty():
             command = self.movementQueue.get()
             self.currentMovementState = command[0]
             self.target = command[1]
 
             # these sets of if statements are use for movement commands that must be executed only once
-            if self.currentMovementState == RobotCommand.FORWARD:
-                self.robot.go_forward_distance(self.target)
-                return
-            elif self.currentMovementState == RobotCommand.SWEEP:
-                self.robot.turn_degrees(360, 0.1)
-                return
-            elif self.currentMovementState == RobotCommand.TURN:
-                self.robot.turn_degrees(self.target)
-                return
+            if self.currentMovementState == RobotCommand.SWEEP:
+                self.robot.init_motor_velocity_control()
+                self.prev_state = self.robot.robotData.yaw
+                self.robot.set_motor_velocity(0.5, -0.5)
 
         if self.currentMovementState == RobotCommand.TURN:
-            if not self.robot.is_moving():
+            if self.robot.turn_degrees(self.target):
                 print('Finished TURN command to {}'.format(self.target))
-                self.reset_state()
+                self.robot.stop_motors()
+                self.reset_movement_state()
         elif self.currentMovementState == RobotCommand.FORWARD:
-            if not self.robot.is_moving():
-                print('Finished FORWARD command to {}'.format(self.target))
-                self.reset_state()
+            delta = degree_to_vector(self.robot.robotData.yaw) * self.target
+            print(delta)
+            self.target = self.robot.robotData.position + delta
+            self.currentMovementState = RobotCommand.POINT
+            print('Converted FORWARD Command to POINT command to {}'.format(self.target))
         elif self.currentMovementState == RobotCommand.POINT:
             if self.robot.move_to_target(self.target):
                 print('Finished POINT command to {}'.format(self.target))
-                self.reset_state()
+                self.robot.stop_motors()
+                self.reset_movement_state()
         elif self.currentMovementState == RobotCommand.OPEN:
             if not self.robot.is_gate_moving():
                 print('Finished OPEN command')
-                self.reset_state()
+                self.reset_movement_state()
         elif self.currentMovementState == RobotCommand.SWEEP:
-            if not self.robot.is_moving():
+            dist = self.robot.get_distance()
+            if Field.distance_to_wall(self.robot.robotData.position, self.robot.robotData.yaw) - dist > 0.02:
+                self.field.add_block(np.array([self.robot.robotData.position[0] + dist * np.cos(self.robot.robotData.yaw), self.robot.robotData.position[1] + dist * np.sin(self.robot.robotData.yaw)]))
+            if self.robot.robotData.yaw < self.prev_state and self.prev_state - self.robot.robotData.yaw < 0.5:
                 print('Finished SWEEP command')
-                self.reset_state()
+                self.reset_movement_state()
 
-    def queue_empty(self):
+    def reset_movement_state(self):
+        self.currentMovementState = None
+
+    def has_movement_command(self):
         return self.movementQueue.empty()
-
-class LogicStateMachine:
-    def __init__(self, robot: Robot):
-        self.logicQueue = queue.Queue()
-        self.movementStateMachine = MovementStateMachine(robot)
-        self.currentLogicState = None
-        self.target = None
-        
-    def movement_queue(self, val):
-        self.movementStateMachine.movementQueue.put(val)
-
-    def queue(self, val):
-        self.logicQueue.put(val)
-
-    def update_movement(self):
-        self.movementStateMachine.update()
     
     def update_logic(self):
-        if self.currentLogicState is None and self.movementStateMachine.queue_empty() and not self.logicQueue.empty():
+        target = None
+        if self.has_movement_command() and not self.logicQueue.empty():
             command = self.logicQueue.get()
             self.currentLogicState = command[0]
-            self.target = command[1]
+            target = command[1]
         if self.currentLogicState == LogicCommand.CAPTURE:
             self.movement_queue((RobotCommand.OPEN,))
-            self.movement_queue((RobotCommand.TRAVEL, (1, 1)))
+            self.movement_queue((RobotCommand.TRAVEL, target))
             self.movement_queue((RobotCommand.CLOSE,))
         elif self.currentLogicState == LogicCommand.SEARCH:
             self.movement_queue((RobotCommand.SWEEP,))
         elif self.currentLogicState == LogicCommand.TRAVEL:
-            diff = self.target - self.movementStateMachine.robot.robotData.position
-            self.movement_queue((RobotCommand.TURN, vector_degree(diff)))
-            self.movement_queue((RobotCommand.POINT, self.target))
+            diff = vector_degree(target - self.robot.robotData.position)
+            self.movement_queue((RobotCommand.TURN, diff))
+            self.movement_queue((RobotCommand.POINT, target))
         elif self.currentLogicState == LogicCommand.DEPOSIT:
             self.movement_queue((RobotCommand.OPEN,))
             self.movement_queue((RobotCommand.FORWARD, - 0.1))
@@ -92,5 +94,13 @@ class LogicStateMachine:
             self.movement_queue((RobotCommand.FORWARD, 0.1))
         elif self.currentLogicState == LogicCommand.TRAVEL_BACK:
             self.movement_queue((RobotCommand.TURN, 100))
-            self.movement_queue((RobotCommand.POINT, self.movementStateMachine.robot.depositBox))
+            self.movement_queue((RobotCommand.POINT, self.robot.depositBox))
         self.currentLogicState = None
+
+    def exit(self):
+        self.currentLogicState = None
+        self.currentMovementState = None
+        while not self.movementQueue.empty():
+            self.movementQueue.get()
+        while not self.logicQueue.empty():
+            self.logicQueue.get()

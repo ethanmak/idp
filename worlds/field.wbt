@@ -198,6 +198,22 @@ DEF WALL_4 Solid {
   name "solid(3)"
   boundingObject USE WALL_SHAPE
 }
+DEF TEST_OBJECT Solid {
+  translation -1 0.05 1
+  rotation 0 1 0 0
+  children [
+    DEF TEST Shape {
+      geometry Sphere {
+        radius 0.025
+      }
+      appearance PBRAppearance{
+        baseColor 0 1 0
+        metalness 1
+      }
+    }
+  ]
+  name "testing sphere"
+}
 DEF BLUE_ROBOT TwoWheelRobot {
   translation 1 0.04 -1
   colour 0 0 1
@@ -210,7 +226,7 @@ DEF RED_ROBOT TwoWheelRobot {
   translation 1 0.05 1
   rotation 0 1 0 3.14
   name "red"
-  controller "<extern>"
+  controller ""
   emitChannel 1
   receiveChannel 0
 }
