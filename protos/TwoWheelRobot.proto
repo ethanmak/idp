@@ -15,9 +15,12 @@ Robot {
   controller IS controller
   children [
     Camera {
-      translation 0 0 0.1
+      translation -0.01 0 0.12
+      rotation 0 1 0 -1.5708
       width 1
       height 1
+      near 0
+      far 0.05
       name "camera"
     }
     Solid {
@@ -103,39 +106,10 @@ Robot {
         }
       }
     }
-    DEF DS_RIGHT DistanceSensor {
-      translation -0.03 0 0.1
-      rotation 0 1 0 -1.87079
-      children [
-        Shape {
-          appearance PBRAppearance {
-            baseColor 0.184314 0.596078 0.847059
-            roughness 1
-            metalness 0
-          }
-          geometry Box {
-            size 0.01 0.01 0.01
-          }
-        }
-      ]
-      name "ds_right"
-    }
-    DEF DS_LEFT DistanceSensor {
-      translation 0.03 0 0.1
-      rotation 0 1 0 -1.27079
-      children [
-        Shape {
-          appearance PBRAppearance {
-            baseColor 0.184314 0.596078 0.847059
-            roughness 1
-            metalness 0
-          }
-          geometry Box {
-            size 0.01 0.01 0.01
-          }
-        }
-      ]
-      name "ds_left"
+    SharpGP2Y0A02YK0F {
+      translation -0.01 0 0.12
+      rotation 0 1 0 -1.5708
+      name "ds_long"
     }
 
     GPS {

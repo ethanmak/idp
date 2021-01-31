@@ -2,11 +2,14 @@
 from robot_controller import *
 from robot_controller.logic import RobotStateMachine
 from robot_controller.display import FieldDisplay
+from robot_controller.field import Field
 
 robot = None  # type: Robot
 blueRobotData = RobotData(position=np.array([1, -1]))
 redRobotData = RobotData()
 sendChannel, receiveChannel = 0, 1
+
+field = Field()
 
 stateMachine = None  # type: RobotStateMachine
 
@@ -18,7 +21,7 @@ def setup():
     robot.stop_motors()
     robot.radio.sender.setChannel(sendChannel)
     robot.radio.receiver.setChannel(receiveChannel)
-    stateMachine = RobotStateMachine(robot)
+    stateMachine = RobotStateMachine(robot,field)
 
     fieldDisplay = FieldDisplay(resolution=800)
 
@@ -35,14 +38,15 @@ def broadcast_update():
 
 if __name__ == '__main__':
     setup()
-    stateMachine.queue((LogicCommand.TRAVEL, (-1, 1)))
-    stateMachine.movement_queue((RobotCommand.TURN, 180))
-    stateMachine.movement_queue((RobotCommand.FORWARD, 1))
+    stateMachine.queue((LogicCommand.SEARCH,))
+    # stateMachine.queue((LogicCommand.TRAVEL, (-1, 1)))
+    # stateMachine.movement_queue((RobotCommand.TURN, 180))
+    # stateMachine.movement_queue((RobotCommand.FORWARD, 1))
     while robot.step():
         process_radio_signals()
         robot.update()
         stateMachine.update_logic()
         stateMachine.update_movement()
         broadcast_update()
-        fieldDisplay.draw(blueRobotData, None, None)
+        fieldDisplay.draw(blueRobotData, None, field)
     fieldDisplay.exit()

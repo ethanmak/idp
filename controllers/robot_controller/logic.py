@@ -29,13 +29,16 @@ class RobotStateMachine:
         if self.currentMovementState is None and not self.movementQueue.empty():
             command = self.movementQueue.get()
             self.currentMovementState = command[0]
-            self.target = command[1]
+            if len(command) > 1:
+                self.target = command[1]
+            else:
+                self.target = None
 
             # these sets of if statements are use for movement commands that must be executed only once
             if self.currentMovementState == RobotCommand.SWEEP:
                 self.robot.init_motor_velocity_control()
                 self.prev_state = self.robot.robotData.yaw
-                self.robot.set_motor_velocity(0.5, -0.5)
+                self.robot.set_motor_velocity(1, -1)
 
         if self.currentMovementState == RobotCommand.TURN:
             if self.robot.turn_degrees(self.target):
@@ -59,10 +62,19 @@ class RobotStateMachine:
                 self.reset_movement_state()
         elif self.currentMovementState == RobotCommand.SWEEP:
             dist = self.robot.get_distance()
-            if Field.distance_to_wall(self.robot.robotData.position, self.robot.robotData.yaw) - dist > 0.02:
-                self.field.add_block(np.array([self.robot.robotData.position[0] + dist * np.cos(self.robot.robotData.yaw), self.robot.robotData.position[1] + dist * np.sin(self.robot.robotData.yaw)]))
+            wall_dist = Field.distance_to_wall(self.robot.robotData.position, self.robot.robotData.yaw)
+            if wall_dist - dist - 0.1 > 0.02 and 0.3 < dist < 1.4 and dist < wall_dist:
+                angle = np.radians(self.robot.robotData.yaw)
+                point = np.array([self.robot.robotData.position[0] + dist * np.cos(angle), self.robot.robotData.position[1] + dist * np.sin(angle)])
+                if not self.field.contains_point(point,threshold=0.05 * 1.4) and Field.in_bounds(point, 0.025) and Field.point_wall_distance(point) > 0.1:
+                    print('found block at {} with dist {} at yaw {} and wall dist {}'.format(point, dist,
+                                                                                             self.robot.robotData.yaw,
+                                                                                             wall_dist))
+                    self.field.add_block(point)
             if self.robot.robotData.yaw < self.prev_state and self.prev_state - self.robot.robotData.yaw < 0.5:
                 print('Finished SWEEP command')
+                print('FIELD:' + self.field.get_additions())
+                self.robot.stop_motors()
                 self.reset_movement_state()
 
     def reset_movement_state(self):
@@ -76,7 +88,8 @@ class RobotStateMachine:
         if self.has_movement_command() and not self.logicQueue.empty():
             command = self.logicQueue.get()
             self.currentLogicState = command[0]
-            target = command[1]
+            if len(command) > 1:
+                target = command[1]
         if self.currentLogicState == LogicCommand.CAPTURE:
             self.movement_queue((RobotCommand.OPEN,))
             self.movement_queue((RobotCommand.TRAVEL, target))

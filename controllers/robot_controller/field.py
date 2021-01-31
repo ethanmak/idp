@@ -25,19 +25,62 @@ class Field:
                 return np.linalg.norm(origin + t1 * direction - origin)
         return -2
 
+    @staticmethod
+    def point_wall_distance(pos):
+        dists = []
+        for i in range(-1, len(Field.walls) - 1):
+            a = Field.walls[i]
+            b = Field.walls[i+1]
+            if a[0] == b[0]:
+                dists.append(abs(a[0] - pos[0]))
+            else:
+                dists.append(abs(a[1] - pos[1]))
+        return min(dists)
+
+    @staticmethod
+    def in_bounds(pos, offset=0):
+        offset += 0.01
+        return -1.2 + offset < pos[0] < 1.2 - offset and -1.2 + offset < pos[1] < 1.2 - offset
+
     def __init__(self):
         self.field = {}
         self.changes = {}
         self.counter = 0
 
-    def add_block(self, pos, color=Color.UNKNOWN):
-        self.field[self.counter] = [pos, color]
+    def add_block(self, pos, color=Color.UNKNOWN, use_field=True):
+        if use_field:
+            self.field[self.counter] = [pos, color]
         self.changes[self.counter] = [pos, color]
         self.counter += 1
 
     def remove_block(self, blockID):
         del self.field[blockID]
 
-    def get_changes(self):
-        return ''
+    def get_additions(self, use_id=True):
+        s = ''
+        for i in self.changes:
+            if use_id:
+                s += str(i) + ' '
+            else:
+                s += '-1 '
+            s += ' '.join(map(str, self.changes[i][0]))
+            s += ' ' + self.changes[i][1].name + ' '
+        self.changes.clear()
+        return s
+
+    def parse(self, radio_input:str, use_id=True):
+        radio_input = radio_input[6:].split(' ')
+        for i in range(0, len(radio_input), 4):
+            if use_id:
+                id = int(radio_input[i])
+            else:
+                id = self.counter
+            self.field[id] = [np.array([float(radio_input[i+1]), float(radio_input[i+2])]), Color[radio_input[i+3]]]
+            if not use_id:
+                self.counter += 1
+
+    def contains_point(self, pos, threshold=0.05):
+        for block in self.field:
+            if np.linalg.norm(self.field[block][0] - pos) <= threshold:
+                return True
 

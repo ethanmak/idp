@@ -16,7 +16,7 @@ class FieldDisplay:
         for i in field:
             pos = self.map_to_pixel(field[i][0])
             color = field[i][-1]
-            pygame.draw.rect(self.screen, color, (pos[0] - self.blockSize/2, pos[1] - self.blockSize/2, pos[0] + self.blockSize/2, pos[1] + self.blockSize/2))
+            pygame.draw.rect(self.screen, color.value, [pos[0] - self.blockSize/2, pos[1] + self.blockSize/2, self.blockSize, self.blockSize])
 
     def _set_robot_position(self, position, angle, color):
         angle = np.radians(angle)

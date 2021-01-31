@@ -58,8 +58,7 @@ class Robot:
         self._maxMotorVelocity = self.leftMotor.getMaxVelocity()
         self._motorVelocityControl = False
 
-        self.leftDistance = robot.getDevice('ds_left')  # type: controller.DistanceSensor
-        self.rightDistance = robot.getDevice('ds_right')  # type: controller.DistanceSensor
+        self.distanceLong = robot.getDevice('ds_long')  # type: controller.DistanceSensor
         self.colorSensor = robot.getDevice('camera')  # type: controller.Camera
         self.gps = robot.getDevice('gps')  # type: controller.GPS
         self.radio = Radio(robot.getDevice('emitter'), robot.getDevice('receiver'))
@@ -68,8 +67,7 @@ class Robot:
         self.leftMotor.enableForceFeedback(self._timestep)
         self.rightMotor.enableForceFeedback(self._timestep)
 
-        self.leftDistance.enable(self._timestep)
-        self.rightDistance.enable(self._timestep)
+        self.distanceLong.enable(self._timestep)
         self.colorSensor.enable(self._timestep)
         self.gps.enable(self._timestep)
         self.radio.enable(self._timestep)
@@ -122,7 +120,7 @@ class Robot:
         return tuple(np.array(self.colorSensor.getImageArray()).flatten())
 
     def get_distance(self):
-        return self.rightDistance.getValue()
+        return 0.7611 * self.distanceLong.getValue()**-0.9313 - 0.1252
 
     def turn_degrees(self, degree, target_vel=None, threshold=0.5):
         '''
