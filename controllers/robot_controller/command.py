@@ -7,6 +7,7 @@ class LogicCommand(enum.Enum):
     CAPTURE = enum.auto()
     DEPOSIT = enum.auto()
     TRAVEL_BACK = enum.auto()
+    COLOR = enum.auto()
 
 
 class RobotCommand(enum.Enum):
@@ -16,4 +17,3 @@ class RobotCommand(enum.Enum):
     SWEEP = enum.auto()
     OPEN = enum.auto()
     CLOSE = enum.auto()
-    COLOR = enum.auto()

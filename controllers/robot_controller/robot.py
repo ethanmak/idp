@@ -1,4 +1,5 @@
 import controller
+from .field import Color
 from .utils import *
 from .pid import PIDController
 import numpy as np
@@ -35,6 +36,7 @@ class RobotData:
         self.position = position
         self.yaw = 0
         self.velocity = np.array([0,0])
+        self.targetBlock = -1
 
     def __repr__(self):
         return ' '.join(map(str, self.position)) + ' ' + str(self.yaw)
@@ -43,12 +45,12 @@ class RobotData:
         return 'Pos: (' + ' '.join(map(str,self.position)) + ') Rot: ' + str(self.yaw)
 
     def parse(self, data):
-        nums = [float(x) for x in data[7:].split()]
+        nums = [float(x) for x in data.split()]
         self.position = np.array(nums[:2])
         self.yaw = nums[-1]
 
 class Robot:
-    def __init__(self, robot: controller.Robot, robotData: RobotData):
+    def __init__(self, robot: controller.Robot, robotData: RobotData, color: Color = Color.UNKNOWN):
         self._robot = robot  # type: controller.Robot
         self._timestep = int(robot.getBasicTimeStep())
         self.robotData = robotData
@@ -78,6 +80,7 @@ class Robot:
         self._pointController = PIDController(1 / 0.1, 0, 0, 0, 0)
         self._wheelRadius = 0.04
         self._wheelbase = 0.140
+        self.color = color
 
         self.depositBox = None
 

@@ -2,7 +2,7 @@ from .utils import *
 import queue
 from .robot import Robot
 from .command import *
-from .field import Field
+from .field import Field, Color
 
 _blueDeposit = np.array([])
 _redDeposit = np.array([])
@@ -66,49 +66,65 @@ class RobotStateMachine:
             if wall_dist - dist - 0.1 > 0.02 and 0.3 < dist < 1.4 and dist < wall_dist:
                 angle = np.radians(self.robot.robotData.yaw)
                 point = np.array([self.robot.robotData.position[0] + dist * np.cos(angle), self.robot.robotData.position[1] + dist * np.sin(angle)])
-                if not self.field.contains_point(point,threshold=0.05 * 1.4) and Field.in_bounds(point, 0.025) and Field.point_wall_distance(point) > 0.1:
-                    print('found block at {} with dist {} at yaw {} and wall dist {}'.format(point, dist,
-                                                                                             self.robot.robotData.yaw,
-                                                                                             wall_dist))
-                    self.field.add_block(point)
-            if self.robot.robotData.yaw < self.prev_state and self.prev_state - self.robot.robotData.yaw < 0.5:
+                # print('possible block at ', point)
+                if not self.field.contains_point(point, threshold=0.05 * 1.4) and Field.in_bounds(point, 0.025) and Field.point_wall_distance(point) > 0.07:
+                    #print('found block at {} with dist {} at yaw {} and wall dist {}'.format(point, dist, self.robot.robotData.yaw, wall_dist))
+                    self.field.add_block(point, use_field=self.target)
+            if self.robot.robotData.yaw < self.prev_state - 0.05 and self.prev_state - self.robot.robotData.yaw < 1:
                 print('Finished SWEEP command')
-                print('FIELD:' + self.field.get_additions())
                 self.robot.stop_motors()
                 self.reset_movement_state()
 
     def reset_movement_state(self):
         self.currentMovementState = None
 
-    def has_movement_command(self):
-        return self.movementQueue.empty()
+    def movement_command_empty(self):
+        return self.movementQueue.empty() and self.currentMovementState is None
     
     def update_logic(self):
         target = None
-        if self.has_movement_command() and not self.logicQueue.empty():
+        state = None
+        if self.movement_command_empty():
+            if self.logicQueue.empty():
+                self.currentLogicState = None
+                return
             command = self.logicQueue.get()
-            self.currentLogicState = command[0]
+            state = command[0]
+            self.currentLogicState = state
             if len(command) > 1:
                 target = command[1]
-        if self.currentLogicState == LogicCommand.CAPTURE:
+        if state == LogicCommand.CAPTURE:
             self.movement_queue((RobotCommand.OPEN,))
             self.movement_queue((RobotCommand.TRAVEL, target))
             self.movement_queue((RobotCommand.CLOSE,))
-        elif self.currentLogicState == LogicCommand.SEARCH:
-            self.movement_queue((RobotCommand.SWEEP,))
-        elif self.currentLogicState == LogicCommand.TRAVEL:
+        elif state == LogicCommand.SEARCH:
+            if target is None:
+                target = True
+            self.movement_queue((RobotCommand.SWEEP, target))
+        elif state == LogicCommand.TRAVEL:
             diff = vector_degree(target - self.robot.robotData.position)
             self.movement_queue((RobotCommand.TURN, diff))
             self.movement_queue((RobotCommand.POINT, target))
-        elif self.currentLogicState == LogicCommand.DEPOSIT:
+        elif state == LogicCommand.DEPOSIT:
             self.movement_queue((RobotCommand.OPEN,))
             self.movement_queue((RobotCommand.FORWARD, - 0.1))
             self.movement_queue((RobotCommand.CLOSE,))
             self.movement_queue((RobotCommand.FORWARD, 0.1))
-        elif self.currentLogicState == LogicCommand.TRAVEL_BACK:
-            self.movement_queue((RobotCommand.TURN, 100))
+        elif state == LogicCommand.TRAVEL_BACK:
+            diff = vector_degree(self.robot.depositBox - self.robot.robotData.position)
+            self.movement_queue((RobotCommand.TURN, diff))
             self.movement_queue((RobotCommand.POINT, self.robot.depositBox))
-        self.currentLogicState = None
+        elif state == LogicCommand.COLOR:
+            color = Color.get_color(self.robot.get_color_sensor_value())
+            self.field.set_block_color(self.robot.robotData.targetBlock, color)
+            if color == self.robot.color:
+                self.queue((LogicCommand.CAPTURE,))
+                self.queue((LogicCommand.TRAVEL_BACK,))
+                self.queue((LogicCommand.DEPOSIT,))
+                #need to figure out where to search
+            else:
+                self.movement_queue((RobotCommand.FORWARD, -0.1))
+                self.queue((LogicCommand.SEARCH,))
 
     def exit(self):
         self.currentLogicState = None

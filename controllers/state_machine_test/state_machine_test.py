@@ -5,8 +5,7 @@ from robot_controller.display import FieldDisplay
 from robot_controller.field import Field
 
 robot = None  # type: Robot
-blueRobotData = RobotData(position=np.array([1, -1]))
-redRobotData = RobotData()
+robotData = RobotData(position=np.array([1, -1]))
 sendChannel, receiveChannel = 0, 1
 
 field = Field()
@@ -17,24 +16,13 @@ fieldDisplay = None  # type: FieldDisplay
 
 def setup():
     global robot, stateMachine, fieldDisplay
-    robot = Robot(controller.Robot(), blueRobotData)
+    robot = Robot(controller.Robot(), robotData)
     robot.stop_motors()
     robot.radio.sender.setChannel(sendChannel)
     robot.radio.receiver.setChannel(receiveChannel)
-    stateMachine = RobotStateMachine(robot,field)
+    stateMachine = RobotStateMachine(robot, field)
 
     fieldDisplay = FieldDisplay(resolution=800)
-
-def process_radio_signals():
-    while robot.radio.hasNext():
-        data = robot.radio.next()
-        if data == '':
-            continue
-        if data.find('UPDATE:') != -1:
-            redRobotData.parse(data)
-
-def broadcast_update():
-    robot.radio.send('UPDATE:' + repr(blueRobotData))
 
 if __name__ == '__main__':
     setup()
@@ -43,10 +31,8 @@ if __name__ == '__main__':
     # stateMachine.movement_queue((RobotCommand.TURN, 180))
     # stateMachine.movement_queue((RobotCommand.FORWARD, 1))
     while robot.step():
-        process_radio_signals()
         robot.update()
         stateMachine.update_logic()
         stateMachine.update_movement()
-        broadcast_update()
-        fieldDisplay.draw(blueRobotData, None, field)
+        fieldDisplay.draw(robotData, None, field) #note that the robot will be blue
     fieldDisplay.exit()

@@ -2,9 +2,14 @@ import enum
 from .utils import *
 
 class Color(enum.Enum):
-    GREEN = (0, 255, 0)
+    RED = (0, 255, 0)
     BLUE = (0, 0, 255)
     UNKNOWN = (88, 92, 99)
+
+    @staticmethod
+    def get_color(rgb):
+        r, g, b = rgb
+        return Color.UNKNOWN
 
 class Field:
     walls = [np.array([-1.2, -1.2]), np.array([-1.2, 1.2]), np.array([1.2, 1.2]), np.array([1.2, -1.2])]
@@ -44,43 +49,78 @@ class Field:
 
     def __init__(self):
         self.field = {}
-        self.changes = {}
+        self.additions = {}
+        self.color_changes = {}
         self.counter = 0
 
     def add_block(self, pos, color=Color.UNKNOWN, use_field=True):
         if use_field:
             self.field[self.counter] = [pos, color]
-        self.changes[self.counter] = [pos, color]
+        self.additions[self.counter] = [pos, color]
         self.counter += 1
+
+    def get_block_pos(self, blockID):
+        return self.field[blockID][0]
+
+    def get_block_color(self, blockID):
+        return self.field[blockID][1]
+
+    def set_block_color(self, blockID, color: Color):
+        self.field[blockID][1] = color
+        self.color_changes[blockID] = color
 
     def remove_block(self, blockID):
         del self.field[blockID]
 
     def get_additions(self, use_id=True):
         s = ''
-        for i in self.changes:
+        for i in self.additions:
             if use_id:
                 s += str(i) + ' '
             else:
                 s += '-1 '
-            s += ' '.join(map(str, self.changes[i][0]))
-            s += ' ' + self.changes[i][1].name + ' '
-        self.changes.clear()
+            s += ' '.join(map(str, self.additions[i][0]))
+            s += ' ' + self.additions[i][1].name + ' '
+        self.additions.clear()
         return s
 
-    def parse(self, radio_input:str, use_id=True):
-        radio_input = radio_input[6:].split(' ')
+    def get_color_changes(self):
+        s = ''
+        for i in self.color_changes:
+            s += str(i) + ' ' + self.color_changes[i].name + ' '
+        self.color_changes.clear()
+        return s
+
+
+    def parse(self, radio_input:str, use_id=True, mark_changes=False):
+        radio_input = radio_input.split(' ')
         for i in range(0, len(radio_input), 4):
+            if radio_input[i] == '':
+                continue
             if use_id:
                 id = int(radio_input[i])
             else:
                 id = self.counter
-            self.field[id] = [np.array([float(radio_input[i+1]), float(radio_input[i+2])]), Color[radio_input[i+3]]]
+            pos = np.array([float(radio_input[i+1]), float(radio_input[i+2])])
+            self.field[id] = [pos, Color[radio_input[i+3]]]
+            if mark_changes:
+                self.additions[id] = self.field[id]
             if not use_id:
                 self.counter += 1
+
+    def parse_color_changes(self, radio_input:str):
+        radio_input = radio_input.split(' ')
+        for i in range(0, len(radio_input), 2):
+            if radio_input[i] == '':
+                continue
+            self.field[int(radio_input[i])][1] = Color[radio_input[i + 1]]
 
     def contains_point(self, pos, threshold=0.05):
         for block in self.field:
             if np.linalg.norm(self.field[block][0] - pos) <= threshold:
                 return True
+        for block in self.additions:
+            if np.linalg.norm(self.additions[block][0] - pos) <= threshold:
+                return True
+        return False
 

@@ -25,9 +25,16 @@ class FieldDisplay:
         p2_line = (center[0] - self.botSize * np.cos(angle), center[1] - self.botSize * np.sin(angle))
         pygame.draw.line(self.screen, (0, 0, 0), center, p2_line)
 
+    def _draw_deposit(self):
+        pygame.draw.rect(self.screen, (84, 84, 255),
+                         [0, self.resolution * 2 / 2.4, self.resolution * 0.4 / 2.4, self.resolution * 0.4 / 2.4])
+        pygame.draw.rect(self.screen, (255, 84, 84),
+                         [0, 0, self.resolution * 0.4 / 2.4, self.resolution * 0.4 / 2.4])
+
     def draw(self, blueRobotData, redRobotData, field):
         pygame.event.get()
         self.screen.fill((255, 255, 255))
+        self._draw_deposit()
         if blueRobotData is not None:
             self._set_robot_position(blueRobotData.position, blueRobotData.yaw, (0, 0, 255))
         if redRobotData is not None:

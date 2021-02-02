@@ -12,7 +12,7 @@ def exit():
 
 if __name__ == '__main__':
     setup()
-    robot.set_motor_velocity(-1, 1)
+    robot.set_motor_velocity(1, -1)
     # robot.stop_motors()
     while robot.step():
         robot.update()

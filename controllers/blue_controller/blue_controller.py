@@ -17,40 +17,49 @@ fieldDisplay = None  # type: FieldDisplay
 
 def setup():
     global robot, stateMachine, fieldDisplay
-    robot = Robot(controller.Robot(), blueRobotData)
+    robot = Robot(controller.Robot(), blueRobotData, Color.BLUE)
     robot.init_motor_velocity_control()
     robot.stop_motors()
     robot.radio.sender.setChannel(sendChannel)
     robot.radio.receiver.setChannel(receiveChannel)
+    robot.depositBox = np.array([1, -1])
+
     stateMachine = RobotStateMachine(robot, field)
 
     fieldDisplay = FieldDisplay(resolution=800, title='Blue Robot Field')
 
 def process_radio_signals():
     while robot.radio.hasNext():
-        data = robot.radio.next()
-        if data == '':
-            continue
-        if data.find('UPDATE:') != -1:
+        string = robot.radio.next().split(':')
+        signal = string[0]
+        if len(string) > 1:
+            data = string[1]
+        if signal == 'UPDATE':
             redRobotData.parse(data)
-        elif data.find('COLOR') != -1:
-            pass
-        elif data.find('BLOCK') != -1:
-            pass
+        elif signal == 'COLOR':
+            field.parse_color_changes(data)
+        elif signal == 'FIELD':
+            field.parse(data, use_id=False, mark_changes=True)
+        elif signal == 'COLOR':
+            field.parse_color_changes(data)
+        elif signal == 'DONE':
+            print('red robot done')
+
 
 def broadcast_update():
     robot.radio.send('UPDATE:' + repr(blueRobotData))
-    field_changes = field.get_additions()
+    field_changes = field.get_additions(use_id=True)
     if field_changes:
         robot.radio.send('FIELD:' + field_changes)
 
 if __name__ == '__main__':
     setup()
+    stateMachine.queue((LogicCommand.SEARCH, True))
     while robot.step():
         process_radio_signals()
         robot.update()
         stateMachine.update_logic()
         stateMachine.update_movement()
         broadcast_update()
-        fieldDisplay.draw(blueRobotData, redRobotData, None)
+        fieldDisplay.draw(blueRobotData, redRobotData, field)
     fieldDisplay.exit()
