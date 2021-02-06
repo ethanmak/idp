@@ -12,7 +12,8 @@ class Color(enum.Enum):
         return Color.UNKNOWN
 
 class Field:
-    walls = [np.array([-1.2, -1.2]), np.array([-1.2, 1.2]), np.array([1.2, 1.2]), np.array([1.2, -1.2])]
+    thickness = 0.01
+    walls = [np.array([-1.2 + thickness, -1.2 + thickness]), np.array([-1.2 + thickness, 1.2 - thickness]), np.array([1.2 - thickness, 1.2 - thickness]), np.array([1.2 - thickness, -1.2 + thickness])]
 
     @staticmethod
     def distance_to_wall(origin, rotation):
@@ -44,7 +45,7 @@ class Field:
 
     @staticmethod
     def in_bounds(pos, offset=0):
-        offset += 0.01
+        offset += Field.thickness
         return -1.2 + offset < pos[0] < 1.2 - offset and -1.2 + offset < pos[1] < 1.2 - offset
 
     def __init__(self):
@@ -92,7 +93,7 @@ class Field:
         return s
 
 
-    def parse(self, radio_input:str, use_id=True, mark_changes=False):
+    def parse(self, radio_input:str, use_id=True, mark_changes=False, threshold=None):
         radio_input = radio_input.split(' ')
         for i in range(0, len(radio_input), 4):
             if radio_input[i] == '':
@@ -102,11 +103,12 @@ class Field:
             else:
                 id = self.counter
             pos = np.array([float(radio_input[i+1]), float(radio_input[i+2])])
-            self.field[id] = [pos, Color[radio_input[i+3]]]
-            if mark_changes:
-                self.additions[id] = self.field[id]
-            if not use_id:
-                self.counter += 1
+            if threshold is None or not self.contains_point(pos, threshold):
+                self.field[id] = [pos, Color[radio_input[i+3]]]
+                if mark_changes:
+                    self.additions[id] = self.field[id]
+                if not use_id:
+                    self.counter += 1
 
     def parse_color_changes(self, radio_input:str):
         radio_input = radio_input.split(' ')
@@ -123,4 +125,9 @@ class Field:
             if np.linalg.norm(self.additions[block][0] - pos) <= threshold:
                 return True
         return False
+
+    def closest_block(self, pos):
+        if len(self.field.keys()) <= 0:
+            return None
+        return min(self.field.keys(), key=lambda x: np.linalg.norm(self.field[x][0] - pos))
 

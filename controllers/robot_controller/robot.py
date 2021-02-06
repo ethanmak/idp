@@ -54,6 +54,7 @@ class Robot:
         self._robot = robot  # type: controller.Robot
         self._timestep = int(robot.getBasicTimeStep())
         self.robotData = robotData
+        self.color = color
 
         self.leftMotor = robot.getDevice('wheel1')  # type: controller.Motor
         self.rightMotor = robot.getDevice('wheel2')  # type: controller.Motor
@@ -80,7 +81,6 @@ class Robot:
         self._pointController = PIDController(1 / 0.1, 0, 0, 0, 0)
         self._wheelRadius = 0.04
         self._wheelbase = 0.140
-        self.color = color
 
         self.depositBox = None
 
@@ -123,7 +123,8 @@ class Robot:
         return tuple(np.array(self.colorSensor.getImageArray()).flatten())
 
     def get_distance(self):
-        return 0.7611 * self.distanceLong.getValue()**-0.9313 - 0.1252
+        # return 0.7611 * self.distanceLong.getValue()**-0.9313 - 0.1252
+        return self.distanceLong.getValue() / 1000
 
     def turn_degrees(self, degree, target_vel=None, threshold=0.5):
         '''
@@ -161,7 +162,6 @@ class Robot:
             turnOutput = 0
         else:
             turnOutput = self._pathController.update(diff_ang)
-        print(velocity, dist, diff_ang, turnOutput)
         motorPower = self._maxMotorVelocity * 0.75 * clamp(self._pointController.update(-dist), -1, 1)
         turnOutput *= motorPower
         self.set_motor_velocity(motorPower - turnOutput, motorPower + turnOutput)

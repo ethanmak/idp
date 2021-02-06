@@ -7,3 +7,5 @@ if __name__ == '__main__':
     y = np.array([-1, 1])
     print(vector_degree(y - x))
     print(Field.distance_to_wall(x, 90))
+    a = np.array([0.5, 0])
+    print(add_distance_vector(a, -0.2))

@@ -16,7 +16,12 @@ class FieldDisplay:
         for i in field:
             pos = self.map_to_pixel(field[i][0])
             color = field[i][-1]
-            pygame.draw.rect(self.screen, color.value, [pos[0] - self.blockSize/2, pos[1] + self.blockSize/2, self.blockSize, self.blockSize])
+            pygame.draw.rect(self.screen, color.value, [pos[0] - self.blockSize/2, pos[1] - self.blockSize/2, self.blockSize, self.blockSize])
+
+    def _draw_target(self, field, robotData, color, thickness=2):
+        if robotData.targetBlock != -1:
+            pygame.draw.circle(self.screen, color, self.map_to_pixel(field[robotData.targetBlock][0]), self.blockSize / 2 * 1.41 + thickness, thickness)
+
 
     def _set_robot_position(self, position, angle, color):
         angle = np.radians(angle)
@@ -37,8 +42,10 @@ class FieldDisplay:
         self._draw_deposit()
         if blueRobotData is not None:
             self._set_robot_position(blueRobotData.position, blueRobotData.yaw, (0, 0, 255))
+            self._draw_target(field.field, blueRobotData, (110, 190, 255))
         if redRobotData is not None:
             self._set_robot_position(redRobotData.position, redRobotData.yaw, (255, 0, 0))
+            self._draw_target(field.field, redRobotData, (255, 92, 92))
         if field is not None:
             self._draw_field(field.field)
         pygame.display.flip()

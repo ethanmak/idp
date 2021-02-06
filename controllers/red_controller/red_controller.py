@@ -44,7 +44,7 @@ def process_radio_signals():
             field.parse(data, use_id=True)
         elif signal == 'END':
             robot.stop_motors()
-            waitingForTarget = False
+            waitingForTarget = True
             stateMachine.exit()
             stateMachine.queue((LogicCommand.TRAVEL_BACK,))
         elif signal == 'TARGET':
@@ -71,6 +71,7 @@ if __name__ == '__main__':
         process_radio_signals()
         robot.update()
         stateMachine.update_logic()
+        # stateMachine.check_failsafes(blueRobotData)
         stateMachine.update_movement()
         broadcast_update()
         fieldDisplay.draw(blueRobotData, redRobotData, field)

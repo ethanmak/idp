@@ -1,27 +1,17 @@
 PROTO TwoWheelRobot [
   field SFVec3f    translation  0 0 0
   field SFRotation rotation     0 1 0 0
-  field SFColor colour 1 0 0
-  field SFString name "robot"
-  field SFString controller "<extern>"
-  field SFInt32 emitChannel 0
-  field SFInt32 receiveChannel 1
+  field SFColor colour 1 0 0 
 ]
 {
 Robot {
   translation IS translation
   rotation IS rotation
-  name IS name
-  controller IS controller
   children [
     Camera {
-      translation -0.01 0 0.12
-      rotation 0 1 0 -1.5708
+      translation 0 0 0.1
       width 1
       height 1
-      near 0.01
-      far 0.05
-      name "camera"
     }
     Solid {
       translation 0 -0.03 0
@@ -56,9 +46,6 @@ Robot {
         RotationalMotor {
           name "wheel1"
           maxTorque 100
-          maxVelocity 10
-        }
-        PositionSensor{
         }
       ]
       endPoint Solid {
@@ -91,7 +78,6 @@ Robot {
         RotationalMotor {
           name "wheel2"
           maxTorque 100
-          maxVelocity 10
         }
       ]
       endPoint Solid {
@@ -106,11 +92,9 @@ Robot {
         }
       }
     }
-
-    DistanceSensor {
-      lookupTable [ 0 0 0, 1.5 1500 0 ]
-      translation 0 -0.02 0.10
-      rotation 0 1 0 -1.5708
+    DEF DS_RIGHT DistanceSensor {
+      translation -0.03 0 0.1
+      rotation 0 1 0 -1.87079
       children [
         Shape {
           appearance PBRAppearance {
@@ -123,25 +107,24 @@ Robot {
           }
         }
       ]
-      name "ds_long"
+      name "ds_right"
     }
-
-    GPS {
-      name "gps"
-    }
-
-    Emitter {
-      name "emitter"
-      channel IS emitChannel
-    }
-
-    Receiver {
-      name "receiver"
-      channel IS receiveChannel
-    }
-
-    Compass {
-      name "compass"
+    DEF DS_LEFT DistanceSensor {
+      translation 0.03 0 0.1
+      rotation 0 1 0 -1.27079
+      children [
+        Shape {
+          appearance PBRAppearance {
+            baseColor 0.184314 0.596078 0.847059
+            roughness 1
+            metalness 0
+          }
+          geometry Box {
+            size 0.01 0.01 0.01
+          }
+        }
+      ]
+      name "ds_left"
     }
   ]
   boundingObject USE BODY
@@ -149,5 +132,6 @@ Robot {
     density -1
     mass 1
   }
+  controller "four_wheel_colision_avoidance"
 }
 }

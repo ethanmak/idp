@@ -23,4 +23,4 @@ def degree_to_vector(degree):
     return np.array([np.cos(degree), np.sin(degree)])
 
 def add_distance_vector(vector, distance):
-    return vector * (1 + distance / np.linalg.norm(vector))
+    return vector + distance * normalize(vector)

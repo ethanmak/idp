@@ -18,6 +18,7 @@ class RobotStateMachine:
         self.prev_state = None
         self.robot = robot
         self.field = field
+        self.storedState = None
         
     def movement_queue(self, val):
         self.movementQueue.put(val)
@@ -26,7 +27,7 @@ class RobotStateMachine:
         self.logicQueue.put(val)
 
     def update_movement(self):
-        if self.currentMovementState is None and not self.movementQueue.empty():
+        if self.currentMovementState is None and not self.movementQueue.empty() and self.storedState is None:
             command = self.movementQueue.get()
             self.currentMovementState = command[0]
             if len(command) > 1:
@@ -38,7 +39,7 @@ class RobotStateMachine:
             if self.currentMovementState == RobotCommand.SWEEP:
                 self.robot.init_motor_velocity_control()
                 self.prev_state = self.robot.robotData.yaw
-                self.robot.set_motor_velocity(1, -1)
+                self.robot.set_motor_velocity(1.5, -1.5)
 
         if self.currentMovementState == RobotCommand.TURN:
             if self.robot.turn_degrees(self.target):
@@ -62,13 +63,17 @@ class RobotStateMachine:
                 self.reset_movement_state()
         elif self.currentMovementState == RobotCommand.SWEEP:
             dist = self.robot.get_distance()
-            wall_dist = Field.distance_to_wall(self.robot.robotData.position, self.robot.robotData.yaw)
-            if wall_dist - dist - 0.1 > 0.02 and 0.3 < dist < 1.4 and dist < wall_dist:
-                angle = np.radians(self.robot.robotData.yaw)
-                point = np.array([self.robot.robotData.position[0] + dist * np.cos(angle), self.robot.robotData.position[1] + dist * np.sin(angle)])
+            rotation = self.robot.robotData.yaw
+            wall_dist = Field.distance_to_wall(self.robot.robotData.position, rotation) - 0.1 # accounting for robot depth
+            if wall_dist - dist - 0.1 > 0.02 and dist < 1.5 and dist < wall_dist:
+                dist += 0.025 + 0.1
+                rotation += 10
+                angle = np.radians(rotation)
+                point = np.array([self.robot.robotData.position[0] + dist * np.cos(angle),
+                                  self.robot.robotData.position[1] + dist * np.sin(angle)])
                 # print('possible block at ', point)
-                if not self.field.contains_point(point, threshold=0.05 * 1.4) and Field.in_bounds(point, 0.025) and Field.point_wall_distance(point) > 0.07:
-                    #print('found block at {} with dist {} at yaw {} and wall dist {}'.format(point, dist, self.robot.robotData.yaw, wall_dist))
+                if not self.field.contains_point(point, threshold=0.05 * 1.5) and Field.in_bounds(point):
+                    # print('found block at {} with dist {} at yaw {} and wall dist {}'.format(point, dist, self.robot.robotData.yaw, wall_dist))
                     self.field.add_block(point, use_field=self.target)
             if self.robot.robotData.yaw < self.prev_state - 0.05 and self.prev_state - self.robot.robotData.yaw < 1:
                 print('Finished SWEEP command')
@@ -121,10 +126,18 @@ class RobotStateMachine:
                 self.queue((LogicCommand.CAPTURE,))
                 self.queue((LogicCommand.TRAVEL_BACK,))
                 self.queue((LogicCommand.DEPOSIT,))
-                #need to figure out where to search
+                #determine where to search
             else:
-                self.movement_queue((RobotCommand.FORWARD, -0.1))
-                self.queue((LogicCommand.SEARCH,))
+                print('not right color')
+                self.movement_queue((RobotCommand.TURN, self.robot.robotData.yaw + 180))
+                self.movement_queue((RobotCommand.FORWARD, 0.1))
+                self.queue((LogicCommand.SEARCH, True if self.robot.color == Color.BLUE else False))
+
+    def check_failsafes(self, otherRobot):
+        dist = np.linalg.norm(self.robot.robotData.position - otherRobot.position)
+        if dist < 0.26:
+            pass
+
 
     def exit(self):
         self.currentLogicState = None

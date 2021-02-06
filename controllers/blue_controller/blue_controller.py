@@ -39,11 +39,11 @@ def process_radio_signals():
         elif signal == 'COLOR':
             field.parse_color_changes(data)
         elif signal == 'FIELD':
-            field.parse(data, use_id=False, mark_changes=True)
+            field.parse(data, use_id=False, mark_changes=True, threshold=0.05 * 1.5)
         elif signal == 'COLOR':
             field.parse_color_changes(data)
         elif signal == 'DONE':
-            print('red robot done')
+            robot.radio.send('TARGET:' + str(field.closest_block(redRobotData.position)))
 
 
 def broadcast_update():
@@ -61,5 +61,11 @@ if __name__ == '__main__':
         stateMachine.update_logic()
         stateMachine.update_movement()
         broadcast_update()
+        if stateMachine.currentLogicState is None:
+            robot.robotData.targetBlock = field.closest_block(blueRobotData.position)
+            print('Target Block:', field.get_block_pos(robot.robotData.targetBlock))
+            stateMachine.queue((LogicCommand.TRAVEL,
+                                add_distance_vector(field.get_block_pos(robot.robotData.targetBlock), -0.2)))
+            stateMachine.queue((LogicCommand.COLOR,))
         fieldDisplay.draw(blueRobotData, redRobotData, field)
     fieldDisplay.exit()
