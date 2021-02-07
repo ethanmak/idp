@@ -2,14 +2,16 @@ import enum
 from .utils import *
 
 class Color(enum.Enum):
-    RED = (0, 255, 0)
+    RED = (255, 0, 0)
     BLUE = (0, 0, 255)
+    GREEN = (0, 90, 0)
     UNKNOWN = (88, 92, 99)
 
     @staticmethod
     def get_color(rgb):
-        r, g, b = rgb
-        return Color.UNKNOWN
+        rgb = normalize(np.array(rgb))
+        return min(list(Color), key=lambda x: np.linalg.norm(rgb - normalize(np.array(x.value))))
+
 
 class Field:
     thickness = 0.01
@@ -53,10 +55,13 @@ class Field:
         self.additions = {}
         self.color_changes = {}
         self.counter = 0
+        self.unvisited = set()
+        self.search_spots = [np.array([0, -1]), np.array([0, 1])]
 
     def add_block(self, pos, color=Color.UNKNOWN, use_field=True):
         if use_field:
             self.field[self.counter] = [pos, color]
+            self.unvisited.add(self.counter)
         self.additions[self.counter] = [pos, color]
         self.counter += 1
 
@@ -105,6 +110,7 @@ class Field:
             pos = np.array([float(radio_input[i+1]), float(radio_input[i+2])])
             if threshold is None or not self.contains_point(pos, threshold):
                 self.field[id] = [pos, Color[radio_input[i+3]]]
+                self.unvisited.add(id)
                 if mark_changes:
                     self.additions[id] = self.field[id]
                 if not use_id:
@@ -126,8 +132,21 @@ class Field:
                 return True
         return False
 
-    def closest_block(self, pos):
-        if len(self.field.keys()) <= 0:
+    def allocate_block(self, pos, color):
+        id = -1
+        min_dist = 1000
+        for key in self.field.keys():
+            if self.field[key][1] == color or self.field[key][1] == Color.UNKNOWN:
+                dist = np.linalg.norm(self.field[key][0] - pos)
+                if dist < min_dist:
+                    min_dist = dist
+                    id = key
+        return id
+
+    def allocate_search(self, pos):
+        if len(self.search_spots) <= 0:
             return None
-        return min(self.field.keys(), key=lambda x: np.linalg.norm(self.field[x][0] - pos))
+        pos = min(self.search_spots, key=lambda x: np.linalg.norm(x - pos))
+        self.search_spots.remove(pos)
+        return pos
 

@@ -9,5 +9,5 @@ orthographicViewHeight: 1
 textFiles: -1
 globalOptionalRendering: CoordinateSystem::DistanceSensorRays
 consoles: Console:All:All
-renderingDevicePerspectives: blue:camera;1;32;0;0.0567537
-renderingDevicePerspectives: red:camera;1;32;0;0
+renderingDevicePerspectives: blue:camera;1;49;0;0
+renderingDevicePerspectives: red:camera;0;32;0;0

@@ -21,6 +21,3 @@ def angle_subtract(x1, x2):
 def degree_to_vector(degree):
     degree = np.radians(degree)
     return np.array([np.cos(degree), np.sin(degree)])
-
-def add_distance_vector(vector, distance):
-    return vector + distance * normalize(vector)

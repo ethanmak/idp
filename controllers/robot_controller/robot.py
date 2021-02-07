@@ -16,7 +16,7 @@ class Radio:
         data = data.encode('utf-8')
         self.sender.send(data)
 
-    def hasNext(self):
+    def has_next(self):
         return self.receiver.getQueueLength() > 0
 
     def next(self):
@@ -35,14 +35,14 @@ class RobotData:
     def __init__(self, position=np.array([0, 0])):
         self.position = position
         self.yaw = 0
-        self.velocity = np.array([0,0])
+        self.velocity = np.array([0, 0])
         self.targetBlock = -1
 
     def __repr__(self):
         return ' '.join(map(str, self.position)) + ' ' + str(self.yaw)
 
     def __str__(self):
-        return 'Pos: (' + ' '.join(map(str,self.position)) + ') Rot: ' + str(self.yaw)
+        return 'Pos: (' + ' '.join(map(str, self.position)) + ') Rot: ' + str(self.yaw)
 
     def parse(self, data):
         nums = [float(x) for x in data.split()]
@@ -97,6 +97,9 @@ class Robot:
 
     def step(self):
         return self._robot.step(self._timestep) != -1
+
+    def get_simulation_time(self):
+        return self._robot.getTime()
 
     def set_motor_velocity(self, left_vel, right_vel):
         self.leftMotor.setVelocity(clamp(left_vel, -self._maxMotorVelocity, self._maxMotorVelocity))

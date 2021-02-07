@@ -14,6 +14,7 @@ class RobotCommand(enum.Enum):
     TURN = enum.auto()
     POINT = enum.auto()
     FORWARD = enum.auto()
+    BACKWARD = enum.auto()
     SWEEP = enum.auto()
     OPEN = enum.auto()
     CLOSE = enum.auto()

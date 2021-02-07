@@ -36,8 +36,9 @@ class FieldDisplay:
         pygame.draw.rect(self.screen, (255, 84, 84),
                          [0, 0, self.resolution * 0.4 / 2.4, self.resolution * 0.4 / 2.4])
 
-    def draw(self, blueRobotData, redRobotData, field):
-        pygame.event.get()
+    def draw(self, blueRobotData, redRobotData, field, progress=True):
+        if progress:
+            pygame.event.get()
         self.screen.fill((255, 255, 255))
         self._draw_deposit()
         if blueRobotData is not None:

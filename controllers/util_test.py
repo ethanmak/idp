@@ -1,5 +1,5 @@
 from robot_controller.utils import *
-from robot_controller.field import Field
+from robot_controller.field import *
 import numpy as np
 
 if __name__ == '__main__':
@@ -8,4 +8,4 @@ if __name__ == '__main__':
     print(vector_degree(y - x))
     print(Field.distance_to_wall(x, 90))
     a = np.array([0.5, 0])
-    print(add_distance_vector(a, -0.2))
+    print(list(Color))

@@ -9,7 +9,7 @@ _redDeposit = np.array([])
 
 
 class RobotStateMachine:
-    def __init__(self, robot: Robot, field: Field = Field()):
+    def __init__(self, robot: Robot, otherRobotData, field: Field = Field()):
         self.logicQueue = queue.Queue()
         self.movementQueue = queue.Queue()
         self.currentMovementState = None
@@ -19,6 +19,7 @@ class RobotStateMachine:
         self.robot = robot
         self.field = field
         self.storedState = None
+        self.otherRobotData = otherRobotData
         
     def movement_queue(self, val):
         self.movementQueue.put(val)
@@ -40,6 +41,8 @@ class RobotStateMachine:
                 self.robot.init_motor_velocity_control()
                 self.prev_state = self.robot.robotData.yaw
                 self.robot.set_motor_velocity(1.5, -1.5)
+            elif self.currentMovementState == RobotCommand.FORWARD or self.currentMovementState == RobotCommand.BACKWARD:
+                self.prev_state = self.robot.get_simulation_time()
 
         if self.currentMovementState == RobotCommand.TURN:
             if self.robot.turn_degrees(self.target):
@@ -47,32 +50,42 @@ class RobotStateMachine:
                 self.robot.stop_motors()
                 self.reset_movement_state()
         elif self.currentMovementState == RobotCommand.FORWARD:
-            delta = degree_to_vector(self.robot.robotData.yaw) * self.target
-            print(delta)
-            self.target = self.robot.robotData.position + delta
-            self.currentMovementState = RobotCommand.POINT
-            print('Converted FORWARD Command to POINT command to {}'.format(self.target))
+            self.robot.set_motor_velocity(3, 3)
+            if self.robot.get_simulation_time() - self.prev_state >= self.target:
+                print('Finished FORWARD Command for {} seconds'.format(self.target))
+                self.robot.stop_motors()
+                self.reset_movement_state()
+        elif self.currentMovementState == RobotCommand.BACKWARD:
+            self.robot.set_motor_velocity(-3, -3)
+            if self.robot.get_simulation_time() - self.prev_state >= self.target:
+                print('Finished BACKWARD Command for {} seconds'.format(self.target))
+                self.robot.stop_motors()
+                self.reset_movement_state()
         elif self.currentMovementState == RobotCommand.POINT:
             if self.robot.move_to_target(self.target):
                 print('Finished POINT command to {}'.format(self.target))
                 self.robot.stop_motors()
                 self.reset_movement_state()
         elif self.currentMovementState == RobotCommand.OPEN:
-            if not self.robot.is_gate_moving():
-                print('Finished OPEN command')
-                self.reset_movement_state()
+            self.robot.open_gate(True)
+            print('Finished OPEN command')
+            self.reset_movement_state()
+        elif self.currentMovementState == RobotCommand.CLOSE:
+            self.robot.open_gate(False)
+            print('Finished CLOSE command')
+            self.reset_movement_state()
         elif self.currentMovementState == RobotCommand.SWEEP:
             dist = self.robot.get_distance()
             rotation = self.robot.robotData.yaw
             wall_dist = Field.distance_to_wall(self.robot.robotData.position, rotation) - 0.1 # accounting for robot depth
             if wall_dist - dist - 0.1 > 0.02 and dist < 1.5 and dist < wall_dist:
                 dist += 0.025 + 0.1
-                rotation += 10
+                # rotation += 1
                 angle = np.radians(rotation)
                 point = np.array([self.robot.robotData.position[0] + dist * np.cos(angle),
                                   self.robot.robotData.position[1] + dist * np.sin(angle)])
                 # print('possible block at ', point)
-                if not self.field.contains_point(point, threshold=0.05 * 1.5) and Field.in_bounds(point):
+                if not self.field.contains_point(point, threshold=0.05 * 1.5) and Field.in_bounds(point) and np.linalg.norm(point - self.otherRobotData.position) > 0.1:
                     # print('found block at {} with dist {} at yaw {} and wall dist {}'.format(point, dist, self.robot.robotData.yaw, wall_dist))
                     self.field.add_block(point, use_field=self.target)
             if self.robot.robotData.yaw < self.prev_state - 0.05 and self.prev_state - self.robot.robotData.yaw < 1:
@@ -99,22 +112,25 @@ class RobotStateMachine:
             if len(command) > 1:
                 target = command[1]
         if state == LogicCommand.CAPTURE:
+            self.movement_queue((RobotCommand.BACKWARD, 1))
             self.movement_queue((RobotCommand.OPEN,))
-            self.movement_queue((RobotCommand.TRAVEL, target))
+            self.movement_queue((RobotCommand.FORWARD, 1.5))
             self.movement_queue((RobotCommand.CLOSE,))
         elif state == LogicCommand.SEARCH:
             if target is None:
-                target = True
+                target = True if self.robot.color == Color.BLUE else False
+            self.movement_queue((RobotCommand.OPEN,))
             self.movement_queue((RobotCommand.SWEEP, target))
+            self.movement_queue((RobotCommand.CLOSE,))
         elif state == LogicCommand.TRAVEL:
             diff = vector_degree(target - self.robot.robotData.position)
             self.movement_queue((RobotCommand.TURN, diff))
             self.movement_queue((RobotCommand.POINT, target))
         elif state == LogicCommand.DEPOSIT:
             self.movement_queue((RobotCommand.OPEN,))
-            self.movement_queue((RobotCommand.FORWARD, - 0.1))
+            self.movement_queue((RobotCommand.BACKWARD, 1.5))
             self.movement_queue((RobotCommand.CLOSE,))
-            self.movement_queue((RobotCommand.FORWARD, 0.1))
+            self.movement_queue((RobotCommand.FORWARD,1.5))
         elif state == LogicCommand.TRAVEL_BACK:
             diff = vector_degree(self.robot.depositBox - self.robot.robotData.position)
             self.movement_queue((RobotCommand.TURN, diff))
@@ -126,12 +142,9 @@ class RobotStateMachine:
                 self.queue((LogicCommand.CAPTURE,))
                 self.queue((LogicCommand.TRAVEL_BACK,))
                 self.queue((LogicCommand.DEPOSIT,))
-                #determine where to search
             else:
-                print('not right color')
-                self.movement_queue((RobotCommand.TURN, self.robot.robotData.yaw + 180))
-                self.movement_queue((RobotCommand.FORWARD, 0.1))
-                self.queue((LogicCommand.SEARCH, True if self.robot.color == Color.BLUE else False))
+                self.movement_queue((RobotCommand.BACKWARD, 1.2))
+                self.queue((LogicCommand.SEARCH,))
 
     def check_failsafes(self, otherRobot):
         dist = np.linalg.norm(self.robot.robotData.position - otherRobot.position)

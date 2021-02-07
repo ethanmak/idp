@@ -13,8 +13,6 @@ field = Field()
 
 stateMachine = None  # type: RobotStateMachine
 
-fieldDisplay = None  # type: FieldDisplay
-
 waitingForTarget = False
 
 def setup():
@@ -25,13 +23,11 @@ def setup():
     robot.radio.sender.setChannel(sendChannel)
     robot.radio.receiver.setChannel(receiveChannel)
     robot.depositBox = np.array([1, 1])
-    stateMachine = RobotStateMachine(robot, field)
-
-    fieldDisplay = FieldDisplay(resolution=800, title='Red Robot Field')
+    stateMachine = RobotStateMachine(robot, blueRobotData, field)
 
 def process_radio_signals():
     global waitingForTarget
-    while robot.radio.hasNext():
+    while robot.radio.has_next():
         string = robot.radio.next().split(':')
         signal = string[0]
         if len(string) > 1:
@@ -50,8 +46,9 @@ def process_radio_signals():
         elif signal == 'TARGET':
             waitingForTarget = False
             robot.robotData.targetBlock = int(data)
+            block_pos = field.get_block_pos(robot.robotData.targetBlock)
             stateMachine.queue((LogicCommand.TRAVEL,
-                                add_distance_vector(field.get_block_pos(robot.robotData.targetBlock), -0.2)))
+                                block_pos - 0.15 * normalize(block_pos - robot.robotData.position)))
             stateMachine.queue((LogicCommand.COLOR,))
 
 def broadcast_update():
@@ -60,6 +57,9 @@ def broadcast_update():
     field_changes = field.get_additions(use_id=False)
     if field_changes:
         robot.radio.send('FIELD:' + field_changes)
+    color_changes = field.get_color_changes()
+    if color_changes:
+        robot.radio.send('COLOR:' + color_changes)
     if stateMachine.currentLogicState is None and not waitingForTarget:
         waitingForTarget = True
         robot.radio.send('DONE')
@@ -74,5 +74,4 @@ if __name__ == '__main__':
         # stateMachine.check_failsafes(blueRobotData)
         stateMachine.update_movement()
         broadcast_update()
-        fieldDisplay.draw(blueRobotData, redRobotData, field)
     fieldDisplay.exit()
