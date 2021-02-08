@@ -132,12 +132,14 @@ class Field:
                 return True
         return False
 
-    def allocate_block(self, pos, color):
+    def allocate_block(self, robotData, otherRobotData=None):
         id = -1
         min_dist = 1000
         for key in self.field.keys():
-            if self.field[key][1] == color or self.field[key][1] == Color.UNKNOWN:
-                dist = np.linalg.norm(self.field[key][0] - pos)
+            if otherRobotData is not None and key == otherRobotData.targetBlock:
+                continue
+            if self.field[key][1] == robotData.color or self.field[key][1] == Color.UNKNOWN:
+                dist = np.linalg.norm(self.field[key][0] - robotData.position)
                 if dist < min_dist:
                     min_dist = dist
                     id = key

@@ -32,11 +32,12 @@ class Radio:
 
 
 class RobotData:
-    def __init__(self, position=np.array([0, 0])):
+    def __init__(self, position=np.array([0, 0]), color=Color.UNKNOWN):
         self.position = position
         self.yaw = 0
         self.velocity = np.array([0, 0])
         self.targetBlock = -1
+        self.color = color
 
     def __repr__(self):
         return ' '.join(map(str, self.position)) + ' ' + str(self.yaw)
@@ -50,14 +51,15 @@ class RobotData:
         self.yaw = nums[-1]
 
 class Robot:
-    def __init__(self, robot: controller.Robot, robotData: RobotData, color: Color = Color.UNKNOWN):
+    def __init__(self, robot: controller.Robot, robotData: RobotData):
         self._robot = robot  # type: controller.Robot
         self._timestep = int(robot.getBasicTimeStep())
         self.robotData = robotData
-        self.color = color
 
         self.leftMotor = robot.getDevice('wheel1')  # type: controller.Motor
         self.rightMotor = robot.getDevice('wheel2')  # type: controller.Motor
+        self.leftGate = robot.getDevice('gate_left')  # type: controller.Motor
+        self.rightGate = robot.getDevice('gate_right')  # type: controller.Motor
         self._maxMotorVelocity = self.leftMotor.getMaxVelocity()
         self._motorVelocityControl = False
 
@@ -79,8 +81,6 @@ class Robot:
         self._turnController = PIDController(0.02, 0.001, 0.05, 0, 2)
         self._pathController = PIDController(0.015, 0, 0, 0, 3)
         self._pointController = PIDController(1 / 0.1, 0, 0, 0, 0)
-        self._wheelRadius = 0.04
-        self._wheelbase = 0.140
 
         self.depositBox = None
 
@@ -151,9 +151,6 @@ class Robot:
     def is_moving(self, thresh=3e-6):
         return abs(self.leftMotor.getTorqueFeedback()) > thresh or abs(self.rightMotor.getTorqueFeedback()) > thresh
 
-    def is_gate_moving(self):
-        return False #change when gate is added
-
     def move_to_target(self, target, threshold=0.02):
         if not self._motorVelocityControl:
             self.init_motor_velocity_control()
@@ -172,7 +169,9 @@ class Robot:
 
     def open_gate(self, is_open: bool):
         if is_open:
-            pass
+            self.leftGate.setPosition(2.35619)
+            self.rightGate.setPosition(-2.35619)
         else:
-            pass
+            self.leftGate.setPosition(0)
+            self.rightGate.setPosition(0)
 

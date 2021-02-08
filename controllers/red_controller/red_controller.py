@@ -5,8 +5,8 @@ from robot_controller.display import FieldDisplay
 from robot_controller.field import Field
 
 robot = None  # type: Robot
-blueRobotData = RobotData(position=np.array([1, -1]))
-redRobotData = RobotData(position=np.array([1, 1]))
+blueRobotData = RobotData(position=np.array([1, -1]), color=Color.BLUE)
+redRobotData = RobotData(position=np.array([1, 1]), color=Color.RED)
 sendChannel, receiveChannel = 1, 0
 
 field = Field()
@@ -16,8 +16,8 @@ stateMachine = None  # type: RobotStateMachine
 waitingForTarget = False
 
 def setup():
-    global robot, stateMachine, fieldDisplay
-    robot = Robot(controller.Robot(), redRobotData, Color.RED)
+    global robot, stateMachine
+    robot = Robot(controller.Robot(), redRobotData)
     robot.init_motor_velocity_control()
     robot.stop_motors()
     robot.radio.sender.setChannel(sendChannel)
@@ -74,4 +74,3 @@ if __name__ == '__main__':
         # stateMachine.check_failsafes(blueRobotData)
         stateMachine.update_movement()
         broadcast_update()
-    fieldDisplay.exit()

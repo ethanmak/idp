@@ -1,11 +1,9 @@
-PROTO TwoWheelRobot [
+PROTO RealRobot [
   field SFVec3f    translation  0 0 0
   field SFRotation rotation     0 1 0 0
   field SFColor colour 1 0 0
   field SFString name "robot"
   field SFString controller "<extern>"
-  field SFInt32 emitChannel 0
-  field SFInt32 receiveChannel 1
 ]
 {
 Robot {
@@ -15,18 +13,19 @@ Robot {
   controller IS controller
   children [
     Camera {
-      translation -0.01 0 0.12
-      rotation 0 1 0 -1.5708
+      translation 0 -0.03 0.12
+      rotation 0 1 0 -3.14
       width 1
       height 1
+      near 0.0001
       far 0.05
     }
     Solid {
-      translation 0 -0.055 0
+      translation 0 -0.06 -0.03
       children [
         Shape {
-          geometry DEF CASTOR_BALL Sphere {
-            radius 0.01
+          geometry DEF CASTOR_BALL Box {
+            size 0.01 0.02 0.01
           }
         }
       ]
@@ -38,7 +37,7 @@ Robot {
     }
     DEF BODY Shape {
       appearance PBRAppearance {
-        baseColor 0 0 1
+        baseColor IS colour
         roughness 1
         metalness 0
       }
@@ -47,7 +46,7 @@ Robot {
       }
     }
     DEF Box2_R Solid {
-      translation 0.06 -0.0199999 0.08
+      translation 0.06 -0.02 0.08
       rotation 1 0 0 1.5708
       children [
         Shape {
@@ -64,7 +63,7 @@ Robot {
       }
     }
     DEF Box2_L Solid {
-      translation -0.06 -0.0199999 0.08
+      translation -0.06 -0.02 0.08
       rotation 1 0 0 1.5708
       children [
         Shape {
@@ -81,65 +80,9 @@ Robot {
       }
     }
     DEF Box2_T Solid {
-      translation 6.40903e-14 0.0100001 0.0800001
+      translation 0 0.01 0.08
       rotation -0.5773509358554485 0.5773489358556708 0.5773509358554485 -2.094395307179586
       children [
-        HingeJoint {
-          jointParameters HingeJointParameters {
-          }
-          device [
-            DEF RM_L RotationalMotor {
-            }
-          ]
-          endPoint Solid {
-            rotation 1 0 0 0
-            children [
-              Solid {
-                translation 0.03 0.06 -0.06
-                scale 1.30689 1.30689 1.30689
-                children [
-                  Shape {
-                    appearance PBRAppearance {
-                      baseColor 0 0 0
-                    }
-                    geometry DEF flap Box {
-                      size 0.0495 0.0495 0.001
-                    }
-                  }
-                ]
-              }
-            ]
-          }
-        }
-        HingeJoint {
-          jointParameters HingeJointParameters {
-          }
-          device [
-            DEF RM_R RotationalMotor {
-            }
-          ]
-          endPoint Solid {
-            rotation 1 0 0 0
-            children [
-              Solid {
-                translation 0.03 0.06 0.06
-                rotation -1 0 0 3.67802e-06
-                scale 1.30689 1.30689 1.30689
-                children [
-                  Shape {
-                    appearance PBRAppearance {
-                      baseColor 0 0 0
-                    }
-                    geometry DEF flap Box {
-                      size 0.0495 0.0495 0.001
-                    }
-                  }
-                ]
-              }
-            ]
-            name "solid(1)"
-          }
-        }
         Shape {
           appearance PBRAppearance {
           }
@@ -148,25 +91,83 @@ Robot {
           }
         }
       ]
-      name "solid(6)"
       boundingObject Box {
         size 0.003 0.064 0.12
       }
     }
+
+    HingeJoint {
+      jointParameters HingeJointParameters {
+        anchor 0.06 -0.02 0.112
+        axis 0 1 0
+      }
+      device [
+        RotationalMotor {
+          name "gate_left"
+          minPosition 0
+          maxPosition 3.14
+        }
+      ]
+      endPoint Solid {
+        children [
+          Solid {
+            translation 0.03 -0.02 0.112
+            children [
+              DEF FLAP Shape {
+                appearance PBRAppearance {
+                  baseColor 0 0 0
+                }
+                geometry Box {
+                  size 0.06 0.0653 0.00131
+                }
+              }
+            ]
+          }
+        ]
+        boundingObject USE FLAP
+        physics Physics{
+        }
+      }
+    }
+    HingeJoint {
+      jointParameters HingeJointParameters {
+        anchor -0.06 -0.02 0.112
+        axis 0 1 0
+      }
+      device [
+        RotationalMotor {
+          name "gate_right"
+          minPosition -3.14
+          maxPosition 0
+        }
+      ]
+      endPoint Solid {
+        children [
+          Solid {
+            translation -0.03 -0.02 0.112
+            children [
+              USE FLAP
+            ]
+          }
+        ]
+        boundingObject USE FLAP
+        physics Physics{
+        }
+      }
+    }
+
     DEF WHEEL1 HingeJoint {
       jointParameters HingeJointParameters {
-        anchor 0.0779 -0.05 0.05
+        anchor 0.0779 -0.03 0.04
       }
       device [
         RotationalMotor {
           name "wheel1"
           maxTorque 100
         }
-        PositionSensor {
-        }
       ]
       endPoint Solid {
-        translation 0.0778999 -0.0300339 0.0401015
+        translation 0.0779 -0.03 0.04
         rotation 0.0019079727809748464 -0.0019079797047584805 -0.9999963596200304 4.712381666377444
         children [
           DEF WHEEL Shape {
@@ -189,7 +190,7 @@ Robot {
     }
     DEF WHEEL2 HingeJoint {
       jointParameters HingeJointParameters {
-        anchor -0.06 0 0.05
+        anchor -0.0779 -0.03 0.04
       }
       device [
         RotationalMotor {
@@ -198,12 +199,11 @@ Robot {
         }
       ]
       endPoint Solid {
-        translation -0.0778999 -0.0300339 0.0401015
+        translation -0.0779 -0.03 0.04
         rotation 0.0017048106017812177 -0.001704816680961621 -0.9999970936062246 4.712382400408873
         children [
           USE WHEEL
         ]
-        name "solid(1)"
         boundingObject USE WHEEL
         physics Physics {
         }
@@ -235,23 +235,20 @@ Robot {
 
     Emitter {
       name "emitter"
-      channel IS emitChannel
     }
 
     Receiver {
       name "receiver"
-      channel IS receiveChannel
     }
 
     Compass {
       name "compass"
     }
   ]
-  name "blue"
   boundingObject USE BODY
   physics Physics {
     density -1
     mass 1
   }
-  controller "<extern>"
+}
 }

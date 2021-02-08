@@ -7,7 +7,7 @@ maximizedDockId: -1
 centralWidgetVisible: 1
 orthographicViewHeight: 1
 textFiles: -1
-globalOptionalRendering: CoordinateSystem::DistanceSensorRays
+globalOptionalRendering: CoordinateSystem
 consoles: Console:All:All
-renderingDevicePerspectives: blue:camera;0;49;0;0
-renderingDevicePerspectives: red:camera;0;58;0.0381679;0.256527
+renderingDevicePerspectives: blue:camera;1;32;0;0.38933
+renderingDevicePerspectives: red:camera;1;32;0;0

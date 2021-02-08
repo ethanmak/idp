@@ -5,8 +5,8 @@ from robot_controller.display import FieldDisplay
 from robot_controller.field import Field
 
 robot = None  # type: Robot
-blueRobotData = RobotData(position=np.array([1, -1]))
-redRobotData = RobotData(position=np.array([1, 1]))
+blueRobotData = RobotData(position=np.array([1, -1]), color=Color.BLUE)
+redRobotData = RobotData(position=np.array([1, 1]), color=Color.RED)
 sendChannel, receiveChannel = 0, 1
 
 field = Field()
@@ -19,7 +19,7 @@ end = False
 
 def setup():
     global robot, stateMachine, fieldDisplay
-    robot = Robot(controller.Robot(), blueRobotData, Color.BLUE)
+    robot = Robot(controller.Robot(), blueRobotData)
     robot.init_motor_velocity_control()
     robot.stop_motors()
     robot.radio.sender.setChannel(sendChannel)
@@ -47,11 +47,11 @@ def process_radio_signals():
             field.parse_color_changes(data)
             print('color')
         elif signal == 'DONE':
-            block_id = field.allocate_block(redRobotData.position, Color.RED)
+            block_id = field.allocate_block(redRobotData, blueRobotData)
             if block_id != -1:
                 robot.radio.send('TARGET:' + str(block_id))
             else:
-                search_pos = field.allocate_search(redRobotData.position)
+                search_pos = field.allocate_search(redRobotData)
                 if search_pos is not None:
                     robot.radio.send('SEARCH:' + ' '.join(map(str, search_pos)))
                 else:
@@ -67,7 +67,7 @@ def broadcast_update():
 def set_new_target():
     global end
     if stateMachine.currentLogicState is None:
-        robot.robotData.targetBlock = field.allocate_block(blueRobotData.position, Color.BLUE)
+        robot.robotData.targetBlock = field.allocate_block(blueRobotData, redRobotData)
         if robot.robotData.targetBlock != -1:
             block_pos = field.get_block_pos(robot.robotData.targetBlock)
             block_color = field.get_block_color(robot.robotData.targetBlock)

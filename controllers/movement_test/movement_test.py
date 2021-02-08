@@ -14,6 +14,7 @@ if __name__ == '__main__':
     setup()
     # robot.set_motor_velocity(1, -1)
     robot.stop_motors()
+    robot.open_gate(True)
     while robot.step():
         robot.update()
         # robot.turn_degrees(90)

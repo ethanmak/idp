@@ -75,11 +75,12 @@ class RobotStateMachine:
             print('Finished CLOSE command')
             self.reset_movement_state()
         elif self.currentMovementState == RobotCommand.SWEEP:
+            robot_dist = 0.07
             dist = self.robot.get_distance()
             rotation = self.robot.robotData.yaw
-            wall_dist = Field.distance_to_wall(self.robot.robotData.position, rotation) - 0.1 # accounting for robot depth
-            if wall_dist - dist - 0.1 > 0.02 and dist < 1.5 and dist < wall_dist:
-                dist += 0.025 + 0.1
+            wall_dist = Field.distance_to_wall(self.robot.robotData.position, rotation) - robot_dist # accounting for robot depth
+            if wall_dist - dist > 0.02 and dist < 1.5 and dist < wall_dist:
+                dist += 0.025 + 0.07
                 # rotation += 1
                 angle = np.radians(rotation)
                 point = np.array([self.robot.robotData.position[0] + dist * np.cos(angle),
@@ -118,7 +119,7 @@ class RobotStateMachine:
             self.movement_queue((RobotCommand.CLOSE,))
         elif state == LogicCommand.SEARCH:
             if target is None:
-                target = True if self.robot.color == Color.BLUE else False
+                target = True if self.robot.robotData.color == Color.BLUE else False
             self.movement_queue((RobotCommand.OPEN,))
             self.movement_queue((RobotCommand.SWEEP, target))
             self.movement_queue((RobotCommand.CLOSE,))
@@ -138,7 +139,8 @@ class RobotStateMachine:
         elif state == LogicCommand.COLOR:
             color = Color.get_color(self.robot.get_color_sensor_value())
             self.field.set_block_color(self.robot.robotData.targetBlock, color)
-            if color == self.robot.color:
+            print('Color of {} is {}'.format(self.robot.robotData.targetBlock, color.name))
+            if color == self.robot.robotData.color:
                 self.queue((LogicCommand.CAPTURE,))
                 self.queue((LogicCommand.TRAVEL_BACK,))
                 self.queue((LogicCommand.DEPOSIT,))
