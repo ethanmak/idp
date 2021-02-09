@@ -29,7 +29,7 @@ Robot {
           }
         }
       ]
-      name "solid(2)"
+      name "castor"
       contactMaterial "slippy"
       boundingObject USE CASTOR_BALL
       physics Physics {
@@ -96,7 +96,7 @@ Robot {
       }
     }
 
-    HingeJoint {
+    DEF GATEL HingeJoint {
       jointParameters HingeJointParameters {
         anchor 0.06 -0.02 0.112
         axis 0 1 0
@@ -109,19 +109,15 @@ Robot {
         }
       ]
       endPoint Solid {
+        translation 0.03 -0.02 0.112
         children [
-          Solid {
-            translation 0.03 -0.02 0.112
-            children [
-              DEF FLAP Shape {
-                appearance PBRAppearance {
-                  baseColor 0 0 0
-                }
-                geometry Box {
-                  size 0.06 0.0653 0.00131
-                }
-              }
-            ]
+          DEF FLAP Shape {
+            appearance PBRAppearance {
+              baseColor 0 0 0
+            }
+            geometry Box {
+              size 0.06 0.0653 0.00131
+            }
           }
         ]
         boundingObject USE FLAP
@@ -129,7 +125,7 @@ Robot {
         }
       }
     }
-    HingeJoint {
+    DEF GATER HingeJoint {
       jointParameters HingeJointParameters {
         anchor -0.06 -0.02 0.112
         axis 0 1 0
@@ -142,13 +138,9 @@ Robot {
         }
       ]
       endPoint Solid {
+        translation -0.03 -0.02 0.112
         children [
-          Solid {
-            translation -0.03 -0.02 0.112
-            children [
-              USE FLAP
-            ]
-          }
+          USE FLAP
         ]
         boundingObject USE FLAP
         physics Physics{
