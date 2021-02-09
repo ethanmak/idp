@@ -50,6 +50,10 @@ class Field:
         offset += Field.thickness
         return -1.2 + offset < pos[0] < 1.2 - offset and -1.2 + offset < pos[1] < 1.2 - offset
 
+    @staticmethod
+    def in_deposit_boxes(pos):
+        return 0.8 <= pos[0] <= 1.2 and not -0.8 < pos[1] < 0.8
+
     def __init__(self):
         self.field = {}
         self.additions = {}
@@ -57,6 +61,7 @@ class Field:
         self.counter = 0
         self.unvisited = set()
         self.search_spots = [np.array([0, -1]), np.array([0, 1])]
+        self.deletions = []
 
     def add_block(self, pos, color=Color.UNKNOWN, use_field=True):
         if use_field:
@@ -77,6 +82,7 @@ class Field:
 
     def remove_block(self, blockID):
         del self.field[blockID]
+        self.deletions.append(blockID)
 
     def get_additions(self, use_id=True):
         s = ''
@@ -96,6 +102,11 @@ class Field:
             s += str(i) + ' ' + self.color_changes[i].name + ' '
         self.color_changes.clear()
         return s
+
+    def get_deletions(self):
+        res = ' '.join(map(str, self.deletions))
+        self.deletions.clear()
+        return res
 
 
     def parse(self, radio_input:str, use_id=True, mark_changes=False, threshold=None):
@@ -123,6 +134,13 @@ class Field:
                 continue
             self.field[int(radio_input[i])][1] = Color[radio_input[i + 1]]
 
+    def parse_deletions(self, radio_input:str):
+        radio_input = list(map(int, radio_input.split(' ')))
+        print(' '.join(map(str, radio_input)))
+        for i in radio_input:
+            del self.field[i]
+        return radio_input
+
     def contains_point(self, pos, threshold=0.05):
         for block in self.field:
             if np.linalg.norm(self.field[block][0] - pos) <= threshold:
@@ -132,23 +150,37 @@ class Field:
                 return True
         return False
 
-    def allocate_block(self, robotData, otherRobotData=None):
+    def allocate_block(self, robotData, otherRobotData):
         id = -1
         min_dist = 1000
+        intersect = False
+        cont_main_loop = False
         for key in self.field.keys():
-            if otherRobotData is not None and key == otherRobotData.targetBlock:
+            if key == otherRobotData.targetBlock:
+                continue
+            for key2 in self.field.keys():
+                if key == key2:
+                    continue
+                if distance_segment_point(robotData.position, self.field[key][0], self.field[key2][0]) < 0.0779 + 0.025:
+                    cont_main_loop = True
+                    break
+            if cont_main_loop:
+                cont_main_loop = False
                 continue
             if self.field[key][1] == robotData.color or self.field[key][1] == Color.UNKNOWN:
                 dist = np.linalg.norm(self.field[key][0] - robotData.position)
                 if dist < min_dist:
                     min_dist = dist
                     id = key
+        if id == -1 and intersect:
+            return -2
         return id
 
-    def allocate_search(self, pos):
+    def allocate_search(self, robotData):
         if len(self.search_spots) <= 0:
             return None
-        pos = min(self.search_spots, key=lambda x: np.linalg.norm(x - pos))
-        self.search_spots.remove(pos)
+        id = min(range(0, len(self.search_spots)), key=lambda x: np.linalg.norm(self.search_spots[x] - robotData.position))
+        pos = self.search_spots[id]
+        del self.search_spots[id]
         return pos
 

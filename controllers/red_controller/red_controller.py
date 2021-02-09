@@ -39,6 +39,7 @@ def process_radio_signals():
         if signal == 'FIELD':
             field.parse(data, use_id=True)
         elif signal == 'END':
+            print('ended')
             robot.stop_motors()
             waitingForTarget = True
             stateMachine.exit()
@@ -48,8 +49,13 @@ def process_radio_signals():
             robot.robotData.targetBlock = int(data)
             block_pos = field.get_block_pos(robot.robotData.targetBlock)
             stateMachine.queue((LogicCommand.TRAVEL,
-                                block_pos - 0.15 * normalize(block_pos - robot.robotData.position)))
+                                block_pos - 0.17 * normalize(block_pos - robot.robotData.position)))
             stateMachine.queue((LogicCommand.COLOR,))
+        elif signal == 'SEARCH':
+            waitingForTarget = False
+            pos = data.split(' ')
+            stateMachine.queue((LogicCommand.TRAVEL, (float(pos[0]), float(pos[1]))))
+            stateMachine.queue((LogicCommand.SEARCH,))
 
 def broadcast_update():
     global waitingForTarget
@@ -60,17 +66,23 @@ def broadcast_update():
     color_changes = field.get_color_changes()
     if color_changes:
         robot.radio.send('COLOR:' + color_changes)
-    if stateMachine.currentLogicState is None and not waitingForTarget:
+    deletions = field.get_deletions()
+    if deletions:
+        robot.radio.send('DELETE:' + deletions)
+        print(deletions)
+    if stateMachine.currentLogicState is None and not waitingForTarget and stateMachine.movement_command_empty():
         waitingForTarget = True
         robot.radio.send('DONE')
 
 if __name__ == '__main__':
     setup()
+    # robot.stop_motors()
+    # stateMachine.movement_queue((RobotCommand.DELAY, 1))
     stateMachine.queue((LogicCommand.SEARCH, False))
     while robot.step():
         process_radio_signals()
         robot.update()
         stateMachine.update_logic()
-        # stateMachine.check_failsafes(blueRobotData)
+        stateMachine.check_failsafes(check_robot_proximity=True)
         stateMachine.update_movement()
         broadcast_update()

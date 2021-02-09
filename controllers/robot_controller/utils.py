@@ -21,3 +21,9 @@ def angle_subtract(x1, x2):
 def degree_to_vector(degree):
     degree = np.radians(degree)
     return np.array([np.cos(degree), np.sin(degree)])
+
+def distance_segment_point(p1, p2, p3):
+    if np.isclose(p1, p2).all():
+        return np.linalg.norm(p3 - p2)
+    l = max(0, min(1, np.dot(p3 - p1, p2 - p1) / np.linalg.norm(p2 - p1) ** 2))
+    return np.linalg.norm(p3 - (p1 + l * (p2 - p1)))

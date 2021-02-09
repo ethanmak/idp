@@ -16,6 +16,8 @@ stateMachine = None  # type: RobotStateMachine
 fieldDisplay = None  # type: FieldDisplay
 
 end = False
+redEnd = False
+setRedTarget = False
 
 def setup():
     global robot, stateMachine, fieldDisplay
@@ -32,6 +34,7 @@ def setup():
 
 
 def process_radio_signals():
+    global setRedTarget
     while robot.radio.has_next():
         string = robot.radio.next().split(':')
         signal = string[0]
@@ -45,17 +48,13 @@ def process_radio_signals():
             field.parse(data, use_id=False, mark_changes=True, threshold=0.05 * 1.5)
         elif signal == 'COLOR':
             field.parse_color_changes(data)
-            print('color')
+        elif signal == 'DELETE':
+            if redRobotData.targetBlock in field.parse_deletions(data):
+                print('deleted')
+                redRobotData.targetBlock = -1
         elif signal == 'DONE':
-            block_id = field.allocate_block(redRobotData, blueRobotData)
-            if block_id != -1:
-                robot.radio.send('TARGET:' + str(block_id))
-            else:
-                search_pos = field.allocate_search(redRobotData)
-                if search_pos is not None:
-                    robot.radio.send('SEARCH:' + ' '.join(map(str, search_pos)))
-                else:
-                    robot.radio.send('END')
+            redRobotData.targetBlock = -1
+            setRedTarget = True
 
 
 def broadcast_update():
@@ -64,14 +63,15 @@ def broadcast_update():
     if field_changes:
         robot.radio.send('FIELD:' + field_changes)
 
-def set_new_target():
-    global end
+def set_new_targets():
+    global end, setRedTarget, redEnd
+    #set blue target
     if stateMachine.currentLogicState is None:
         robot.robotData.targetBlock = field.allocate_block(blueRobotData, redRobotData)
-        if robot.robotData.targetBlock != -1:
+        if robot.robotData.targetBlock >= 0:
             block_pos = field.get_block_pos(robot.robotData.targetBlock)
             block_color = field.get_block_color(robot.robotData.targetBlock)
-            target = block_pos - 0.15 * normalize(block_pos - robot.robotData.position)
+            target = block_pos - 0.17 * normalize(block_pos - robot.robotData.position)
             stateMachine.queue((LogicCommand.TRAVEL, target))
             if block_color == Color.UNKNOWN:
                 stateMachine.queue((LogicCommand.COLOR,))
@@ -79,23 +79,45 @@ def set_new_target():
                 stateMachine.queue((LogicCommand.CAPTURE,))
                 stateMachine.queue((LogicCommand.TRAVEL_BACK,))
                 stateMachine.queue((LogicCommand.DEPOSIT,))
+                field.remove_block(robot.robotData.targetBlock)
+                robot.robotData.targetBlock = -1
         else:
-            search_position = field.allocate_search(robot.robotData.position)
+            search_position = field.allocate_search(robot.robotData)
             if search_position is None:
-                stateMachine.queue((LogicCommand.TRAVEL_BACK,))
+                if not end:
+                    stateMachine.queue((LogicCommand.TRAVEL_BACK,))
+                    end = True
             else:
                 stateMachine.queue((LogicCommand.TRAVEL, search_position))
                 stateMachine.queue((LogicCommand.SEARCH, True))
 
+    if setRedTarget:
+        block_id = field.allocate_block(redRobotData, blueRobotData)
+        if block_id >= 0:
+            redRobotData.targetBlock = block_id
+            robot.radio.send('TARGET:' + str(block_id))
+            setRedTarget = False
+        else:
+            search_pos = field.allocate_search(redRobotData)
+            if search_pos is not None:
+                robot.radio.send('SEARCH:' + ' '.join(map(str, search_pos)))
+                setRedTarget = False
+            elif block_id == -1 and not redEnd:
+                robot.radio.send('END')
+                redEnd = True
+
 if __name__ == '__main__':
     setup()
+    # robot.stop_motors()
+    # stateMachine.movement_queue((RobotCommand.DELAY, 1))
     stateMachine.queue((LogicCommand.SEARCH, True))
     while robot.step():
         process_radio_signals()
         robot.update()
         stateMachine.update_logic()
+        stateMachine.check_failsafes(check_robot_proximity=False)
         stateMachine.update_movement()
-        set_new_target()
         broadcast_update()
+        set_new_targets()
         fieldDisplay.draw(blueRobotData, redRobotData, field)
     fieldDisplay.exit()

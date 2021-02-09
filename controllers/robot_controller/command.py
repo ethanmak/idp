@@ -18,3 +18,5 @@ class RobotCommand(enum.Enum):
     SWEEP = enum.auto()
     OPEN = enum.auto()
     CLOSE = enum.auto()
+    DELAY = enum.auto()
+    PAUSE = enum.auto()

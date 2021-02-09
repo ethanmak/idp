@@ -4,8 +4,6 @@ import numpy as np
 
 if __name__ == '__main__':
     x = np.array([1, -1])
-    y = np.array([-1, 1])
-    print(vector_degree(y - x))
-    print(Field.distance_to_wall(x, 90))
-    a = np.array([0.5, 0])
-    print(list(Color))
+    y = np.array([-1, -1])
+    a = np.array([-2, 0])
+    print(distance_segment_point(x, y, a))

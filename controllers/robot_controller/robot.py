@@ -38,6 +38,7 @@ class RobotData:
         self.velocity = np.array([0, 0])
         self.targetBlock = -1
         self.color = color
+        self.targetPos = None
 
     def __repr__(self):
         return ' '.join(map(str, self.position)) + ' ' + str(self.yaw)
@@ -79,7 +80,7 @@ class Robot:
         self.compass.enable(self._timestep)
 
         self._turnController = PIDController(0.02, 0.001, 0.05, 0, 2)
-        self._pathController = PIDController(0.015, 0, 0, 0, 3)
+        self._pathController = PIDController(0.01, 0, 0, 0, 3)
         self._pointController = PIDController(1 / 0.1, 0, 0, 0, 0)
 
         self.depositBox = None
@@ -138,7 +139,7 @@ class Robot:
         :return: None
         '''
         if target_vel is None:
-            target_vel = self._maxMotorVelocity * 0.75
+            target_vel = self._maxMotorVelocity * 0.8
         # dist = (degree - self.robotData.yaw) / 360 * np.pi * self._wheelbase / self._wheelRadius
         # self._set_motor_position(dist, -dist)
         if not self._motorVelocityControl:
@@ -162,7 +163,7 @@ class Robot:
             turnOutput = 0
         else:
             turnOutput = self._pathController.update(diff_ang)
-        motorPower = self._maxMotorVelocity * 0.75 * clamp(self._pointController.update(-dist), -1, 1)
+        motorPower = self._maxMotorVelocity * 0.8* clamp(self._pointController.update(-dist), -1, 1)
         turnOutput *= motorPower
         self.set_motor_velocity(motorPower - turnOutput, motorPower + turnOutput)
         return dist < threshold
