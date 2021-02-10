@@ -38,6 +38,8 @@ def process_radio_signals():
             blueRobotData.parse(data)
         if signal == 'FIELD':
             field.parse(data, use_id=True)
+        elif signal == 'DELETE':
+            field.parse_deletions(data)
         elif signal == 'END':
             print('ended')
             robot.stop_motors()
@@ -69,20 +71,19 @@ def broadcast_update():
     deletions = field.get_deletions()
     if deletions:
         robot.radio.send('DELETE:' + deletions)
-        print(deletions)
     if stateMachine.currentLogicState is None and not waitingForTarget and stateMachine.movement_command_empty():
         waitingForTarget = True
         robot.radio.send('DONE')
 
 if __name__ == '__main__':
     setup()
-    # robot.stop_motors()
-    # stateMachine.movement_queue((RobotCommand.DELAY, 1))
+    robot.stop_motors()
+    stateMachine.queue((LogicCommand.DELAY, 1))
     stateMachine.queue((LogicCommand.SEARCH, False))
     while robot.step():
         process_radio_signals()
         robot.update()
         stateMachine.update_logic()
-        stateMachine.check_failsafes(check_robot_proximity=True)
+        stateMachine.check_failsafes(give_way=True)
         stateMachine.update_movement()
         broadcast_update()

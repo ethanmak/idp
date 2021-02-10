@@ -19,7 +19,7 @@ class FieldDisplay:
             pygame.draw.rect(self.screen, color.value, [pos[0] - self.blockSize/2, pos[1] - self.blockSize/2, self.blockSize, self.blockSize])
 
     def _draw_target(self, field, robotData, color, thickness=2):
-        if robotData.targetBlock != -1:
+        if robotData.targetBlock >= 0:
             pygame.draw.circle(self.screen, color, self.map_to_pixel(field[robotData.targetBlock][0]), self.blockSize / 2 * 1.41 + thickness, thickness)
 
 

@@ -42,7 +42,7 @@ class RobotStateMachine:
             if self.currentMovementState == RobotCommand.SWEEP:
                 self.robot.init_motor_velocity_control()
                 self.prev_state = self.robot.robotData.yaw
-                self.robot.set_motor_velocity(2, -2)
+                self.robot.set_motor_velocity(1.5, -1.5)
 
         if self.currentMovementState == RobotCommand.TURN:
             if self.robot.turn_degrees(self.target) or self.timed_out():
@@ -79,15 +79,19 @@ class RobotStateMachine:
             dist = self.robot.get_distance()
             rotation = self.robot.robotData.yaw
             wall_dist = Field.distance_to_wall(self.robot.robotData.position, rotation) - robot_dist # accounting for robot depth
+            wall_dist = clamp(wall_dist, 0, 1.5)
             if wall_dist - dist > 0.02 and dist < 1.5 and dist < wall_dist:
                 dist += 0.025 + robot_dist
-                rotation += 1
+                # rotation += 1
                 angle = np.radians(rotation)
                 point = np.array([self.robot.robotData.position[0] + dist * np.cos(angle),
                                   self.robot.robotData.position[1] + dist * np.sin(angle)])
                 # print('possible block at ', point)
-                if not self.field.contains_point(point, threshold=0.05 * 1.7) and Field.in_bounds(point) and np.linalg.norm(point - self.otherRobotData.position) > 0.154 and not Field.in_deposit_boxes(point):
-                    # print('found block at {} with dist {} at yaw {} and wall dist {}'.format(point, dist, self.robot.robotData.yaw, wall_dist))
+                if not self.field.contains_point(point, threshold=0.05 * 1.7) \
+                        and Field.in_bounds(point) \
+                        and np.linalg.norm(point - self.otherRobotData.position) > 0.17 \
+                        and not Field.in_deposit_boxes(point):
+                    print('found block at {} with dist {} at yaw {} and wall dist {}'.format(point, dist, self.robot.robotData.yaw, wall_dist))
                     self.field.add_block(point, use_field=self.target)
             if self.robot.robotData.yaw < self.prev_state - 0.05 and self.prev_state - self.robot.robotData.yaw < 1:
                 self.prev_state = None
@@ -101,6 +105,12 @@ class RobotStateMachine:
             if self.robot.get_simulation_time() - self.prev_time >= self.target:
                 print('Finished DELAY command for {} seconds'.format(self.target))
                 self.reset_movement_state()
+        elif self.currentMovementState == RobotCommand.REMOVE_BLOCK:
+            self.field.remove_block(self.target)
+            print('Removed block with ID {} from the field'.format(self.target))
+            if self.robot.robotData.targetBlock == self.target:
+                self.robot.robotData.targetBlock = -1
+            self.reset_movement_state()
 
     def timed_out(self):
         timed = self.robot.get_simulation_time() - self.prev_time > 12
@@ -127,10 +137,12 @@ class RobotStateMachine:
             if len(command) > 1:
                 target = command[1]
         if state == LogicCommand.CAPTURE:
+            print('CAPTURE of ', self.robot.robotData.targetBlock)
             self.movement_queue((RobotCommand.BACKWARD, 1))
             self.movement_queue((RobotCommand.OPEN,))
-            self.movement_queue((RobotCommand.FORWARD, 1.5))
+            self.movement_queue((RobotCommand.FORWARD, 2))
             self.movement_queue((RobotCommand.CLOSE,))
+            self.movement_queue((RobotCommand.REMOVE_BLOCK, self.robot.robotData.targetBlock))
         elif state == LogicCommand.SEARCH:
             if target is None:
                 target = True if self.robot.robotData.color == Color.BLUE else False
@@ -145,8 +157,8 @@ class RobotStateMachine:
             self.movement_queue((RobotCommand.OPEN,))
             self.movement_queue((RobotCommand.BACKWARD, 1.5))
             self.movement_queue((RobotCommand.CLOSE,))
-            self.movement_queue((RobotCommand.FORWARD,1.5))
-            self.movement_queue((RobotCommand.BACKWARD, 1))
+            # self.movement_queue((RobotCommand.FORWARD, 1.5))
+            # self.movement_queue((RobotCommand.BACKWARD, 1))
         elif state == LogicCommand.TRAVEL_BACK:
             diff = vector_degree(self.robot.depositBox - self.robot.robotData.position)
             self.movement_queue((RobotCommand.TURN, diff))
@@ -156,62 +168,72 @@ class RobotStateMachine:
             print('RGB is', value)
             color = Color.get_color(value)
             self.field.set_block_color(self.robot.robotData.targetBlock, color)
+            if color == Color.GREEN or color == Color.UNKNOWN:
+                self.field.remove_block(self.robot.robotData.targetBlock)
             if color == self.robot.robotData.color:
                 self.queue((LogicCommand.CAPTURE,))
                 self.queue((LogicCommand.TRAVEL_BACK,))
                 self.queue((LogicCommand.DEPOSIT,))
-                self.field.remove_block(self.robot.robotData.targetBlock)
-                print(self.robot.robotData.targetBlock, 'block is deposited')
             else:
                 self.movement_queue((RobotCommand.BACKWARD, 1.2))
                 self.queue((LogicCommand.SEARCH,))
-                if color == Color.GREEN or color == Color.UNKNOWN:
-                    self.field.remove_block(self.robot.robotData.targetBlock)
-            self.robot.robotData.targetBlock = -1
+                self.robot.robotData.targetBlock = -1
+        elif state == LogicCommand.DELAY:
+            self.movement_queue((RobotCommand.DELAY, target))
 
-    def check_failsafes(self, check_robot_proximity=False):
-        #check distance to other robot
-        if check_robot_proximity:
-            dist = np.linalg.norm(self.robot.robotData.position - self.otherRobotData.position)
-            if dist < 0.12:
-                return
-
+    def check_failsafes(self, give_way=False):
         dir = degree_to_vector(self.robot.robotData.yaw)
         start = self.robot.robotData.position + dir * 0.07
-        end = start + dir * 0.05
+        end = start + dir * 0.1
+        left_dist = Field.distance_to_wall(self.robot.robotData.position, self.robot.robotData.yaw - 90)
+        right_dist = Field.distance_to_wall(self.robot.robotData.position, self.robot.robotData.yaw + 90)
 
         if self.currentMovementState != RobotCommand.POINT and self.currentMovementState != RobotCommand.PAUSE:
             return
 
         #check for frontal distance to other robot
-        if distance_segment_point(start, end, self.otherRobotData.position) < 0.0779 + 0.0779 * 1.4:
-            if self.currentMovementState != RobotCommand.PAUSE:
+        margin = 0.07
+        if distance_segment_point(start, end, self.otherRobotData.position) < margin + margin * 1.4:
+            if abs(self.otherRobotData.yaw - self.robot.robotData.yaw - 180) < 60 and give_way:
+                self.movementQueue.appendleft((self.currentMovementState, self.target))
+                self.movementQueue.appendleft((RobotCommand.FORWARD, 2))
+                if left_dist > right_dist:
+                    self.movementQueue.appendleft((RobotCommand.TURN, self.robot.robotData.yaw - 90))
+                else:
+                    self.movementQueue.appendleft((RobotCommand.TURN, self.robot.robotData.yaw + 90))
+                self.movementQueue.appendleft((RobotCommand.BACKWARD, 1))
+                self.reset_movement_state()
+            elif self.currentMovementState != RobotCommand.PAUSE:
                 self.movementQueue.appendleft((self.currentMovementState, self.target))
                 self.currentMovementState = RobotCommand.PAUSE
         elif self.currentMovementState == RobotCommand.PAUSE:
             self.reset_movement_state()
 
         #check for distance to blocks
-        # for id in self.field.field:
-        #     if id == self.robot.robotData.targetBlock:
-        #         continue
-        #     if distance_segment_point(start, end, self.field.field[id][0]) < 0.0779 + 0.025:
-        #         print('block collision', id)
-        #         self.movementQueue.appendleft((self.currentMovementState, self.target))
-        #         self.currentMovementState = None
-        #
-        #         self.movementQueue.appendleft((RobotCommand.FORWARD, 1))
-        #         self.movementQueue.appendleft((RobotCommand.TURN, self.robot.robotData.yaw))
-        #         self.movementQueue.appendleft((RobotCommand.FORWARD, 1))
-        #         left_dist = Field.distance_to_wall(self.robot.robotData.position, self.robot.robotData.yaw - 90)
-        #         right_dist = Field.distance_to_wall(self.robot.robotData.position, self.robot.robotData.yaw + 90)
-        #         if left_dist > right_dist:
-        #             print('LEFT', self.robot.robotData.yaw - 90)
-        #             self.movementQueue.appendleft((RobotCommand.TURN, self.robot.robotData.yaw - 90))
-        #         else:
-        #             print('RIGHT')
-        #             self.movementQueue.appendleft((RobotCommand.TURN, self.robot.robotData.yaw + 90))
-        #         return
+        if Field.in_deposit_boxes(self.robot.robotData.position, offset=-0.03):
+            return
+        for id in self.field.field:
+            if id == self.robot.robotData.targetBlock:
+                continue
+            if distance_segment_point_no_end(start, end, self.field.field[id][0]) < margin + 0.025:
+                self.movementQueue.appendleft((self.currentMovementState, self.target))
+                self.currentMovementState = None
+                self.movementQueue.appendleft((RobotCommand.TURN, self.robot.robotData.yaw))
+                self.movementQueue.appendleft((RobotCommand.FORWARD, 1.5))
+                if left_dist > right_dist:
+                    self.movementQueue.appendleft((RobotCommand.TURN, self.robot.robotData.yaw + 90))
+                else:
+                    self.movementQueue.appendleft((RobotCommand.TURN, self.robot.robotData.yaw - 90))
+                self.movementQueue.appendleft((RobotCommand.FORWARD, 3))
+                self.movementQueue.appendleft((RobotCommand.TURN, self.robot.robotData.yaw))
+                self.movementQueue.appendleft((RobotCommand.FORWARD, 1.5))
+
+                if left_dist > right_dist:
+                    self.movementQueue.appendleft((RobotCommand.TURN, self.robot.robotData.yaw - 90))
+                else:
+                    self.movementQueue.appendleft((RobotCommand.TURN, self.robot.robotData.yaw + 90))
+                self.movementQueue.appendleft((RobotCommand.BACKWARD, 0.5))
+                return
 
 
     def exit(self):

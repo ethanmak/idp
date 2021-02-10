@@ -62,6 +62,9 @@ def broadcast_update():
     field_changes = field.get_additions(use_id=True)
     if field_changes:
         robot.radio.send('FIELD:' + field_changes)
+    deletions = field.get_deletions()
+    if deletions:
+        robot.radio.send('DELETE:' + deletions)
 
 def set_new_targets():
     global end, setRedTarget, redEnd
@@ -79,8 +82,6 @@ def set_new_targets():
                 stateMachine.queue((LogicCommand.CAPTURE,))
                 stateMachine.queue((LogicCommand.TRAVEL_BACK,))
                 stateMachine.queue((LogicCommand.DEPOSIT,))
-                field.remove_block(robot.robotData.targetBlock)
-                robot.robotData.targetBlock = -1
         else:
             search_position = field.allocate_search(robot.robotData)
             if search_position is None:
@@ -108,14 +109,14 @@ def set_new_targets():
 
 if __name__ == '__main__':
     setup()
-    # robot.stop_motors()
-    # stateMachine.movement_queue((RobotCommand.DELAY, 1))
+    robot.stop_motors()
+    stateMachine.queue((LogicCommand.DELAY, 1))
     stateMachine.queue((LogicCommand.SEARCH, True))
     while robot.step():
         process_radio_signals()
         robot.update()
         stateMachine.update_logic()
-        stateMachine.check_failsafes(check_robot_proximity=False)
+        stateMachine.check_failsafes(give_way=False)
         stateMachine.update_movement()
         broadcast_update()
         set_new_targets()

@@ -27,3 +27,9 @@ def distance_segment_point(p1, p2, p3):
         return np.linalg.norm(p3 - p2)
     l = max(0, min(1, np.dot(p3 - p1, p2 - p1) / np.linalg.norm(p2 - p1) ** 2))
     return np.linalg.norm(p3 - (p1 + l * (p2 - p1)))
+
+def distance_segment_point_no_end(p1, p2, p3):
+    dist = distance_segment_point(p1, p2, p3)
+    if np.isclose(dist, np.linalg.norm(p3 - p2)) or np.isclose(dist, np.linalg.norm(p3 - p1)):
+        return 1000
+    return dist

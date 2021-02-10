@@ -13,7 +13,7 @@ Robot {
   controller IS controller
   children [
     Camera {
-      translation 0 -0.03 0.12
+      translation 0 -0.03 0.105
       rotation 0 1 0 -3.14
       width 1
       height 1
@@ -42,11 +42,11 @@ Robot {
         metalness 0
       }
       geometry Box {
-        size 0.135 0.105 0.102
+        size 0.104 0.105 0.102
       }
     }
     DEF Box2_R Solid {
-      translation 0.06 -0.02 0.08
+      translation 0.052 -0.02 0.08
       rotation 1 0 0 1.5708
       children [
         Shape {
@@ -63,7 +63,7 @@ Robot {
       }
     }
     DEF Box2_L Solid {
-      translation -0.06 -0.02 0.08
+      translation -0.052 -0.02 0.08
       rotation 1 0 0 1.5708
       children [
         Shape {
@@ -87,7 +87,7 @@ Robot {
           appearance PBRAppearance {
           }
           geometry Box {
-            size 0.004 0.064 0.12
+            size 0.004 0.064 0.104
           }
         }
       ]
@@ -98,7 +98,7 @@ Robot {
 
     DEF GATEL HingeJoint {
       jointParameters HingeJointParameters {
-        anchor 0.06 -0.02 0.112
+        anchor 0.052 -0.02 0.112
         axis 0 1 0
       }
       device [
@@ -109,14 +109,14 @@ Robot {
         }
       ]
       endPoint Solid {
-        translation 0.03 -0.02 0.112
+        translation 0.0251 -0.02 0.112
         children [
           DEF FLAP Shape {
             appearance PBRAppearance {
               baseColor 0 0 0
             }
             geometry Box {
-              size 0.06 0.0653 0.00131
+              size 0.052 0.0653 0.00131
             }
           }
         ]
@@ -127,7 +127,7 @@ Robot {
     }
     DEF GATER HingeJoint {
       jointParameters HingeJointParameters {
-        anchor -0.06 -0.02 0.112
+        anchor -0.052 -0.02 0.112
         axis 0 1 0
       }
       device [
@@ -138,7 +138,7 @@ Robot {
         }
       ]
       endPoint Solid {
-        translation -0.03 -0.02 0.112
+        translation -0.0251 -0.02 0.112
         children [
           USE FLAP
         ]
@@ -150,7 +150,7 @@ Robot {
 
     DEF WHEEL1 HingeJoint {
       jointParameters HingeJointParameters {
-        anchor 0.0779 -0.03 0.04
+        anchor 0.064 -0.03 0.04
       }
       device [
         RotationalMotor {
@@ -159,8 +159,8 @@ Robot {
         }
       ]
       endPoint Solid {
-        translation 0.0779 -0.03 0.04
-        rotation 0.0019079727809748464 -0.0019079797047584805 -0.9999963596200304 4.712381666377444
+        translation 0.064 -0.03 0.04
+        rotation 0.0019079727809748464 -0.0019079797047584805 -1 4.712381666377444
         children [
           DEF WHEEL Shape {
             appearance PBRAppearance {
@@ -182,7 +182,7 @@ Robot {
     }
     DEF WHEEL2 HingeJoint {
       jointParameters HingeJointParameters {
-        anchor -0.0779 -0.03 0.04
+        anchor -0.064 -0.03 0.04
       }
       device [
         RotationalMotor {
@@ -191,7 +191,7 @@ Robot {
         }
       ]
       endPoint Solid {
-        translation -0.0779 -0.03 0.04
+        translation -0.064 -0.03 0.04
         rotation 0.0017048106017812177 -0.001704816680961621 -0.9999970936062246 4.712382400408873
         children [
           USE WHEEL
@@ -202,7 +202,7 @@ Robot {
       }
     }
     DistanceSensor {
-      translation 0 -0.03 0.07
+      translation 0 -0.03 0.055
       rotation 0 1 0 -1.5708
       children [
         Shape {

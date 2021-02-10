@@ -8,6 +8,7 @@ class LogicCommand(enum.Enum):
     DEPOSIT = enum.auto()
     TRAVEL_BACK = enum.auto()
     COLOR = enum.auto()
+    DELAY = enum.auto()
 
 
 class RobotCommand(enum.Enum):
@@ -20,3 +21,4 @@ class RobotCommand(enum.Enum):
     CLOSE = enum.auto()
     DELAY = enum.auto()
     PAUSE = enum.auto()
+    REMOVE_BLOCK = enum.auto()

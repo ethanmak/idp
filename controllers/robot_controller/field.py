@@ -51,8 +51,8 @@ class Field:
         return -1.2 + offset < pos[0] < 1.2 - offset and -1.2 + offset < pos[1] < 1.2 - offset
 
     @staticmethod
-    def in_deposit_boxes(pos):
-        return 0.8 <= pos[0] <= 1.2 and not -0.8 < pos[1] < 0.8
+    def in_deposit_boxes(pos, offset=0):
+        return 0.8 + offset <= pos[0] <= 1.2 - offset and not -0.8 - offset < pos[1] < 0.8 + offset
 
     def __init__(self):
         self.field = {}
@@ -60,7 +60,7 @@ class Field:
         self.color_changes = {}
         self.counter = 0
         self.unvisited = set()
-        self.search_spots = [np.array([0, -1]), np.array([0, 1])]
+        self.search_spots = [np.array([0, -1]), np.array([0, 1]), np.array([0, 0])]
         self.deletions = []
 
     def add_block(self, pos, color=Color.UNKNOWN, use_field=True):
@@ -136,7 +136,6 @@ class Field:
 
     def parse_deletions(self, radio_input:str):
         radio_input = list(map(int, radio_input.split(' ')))
-        print(' '.join(map(str, radio_input)))
         for i in radio_input:
             del self.field[i]
         return radio_input
@@ -161,8 +160,9 @@ class Field:
             for key2 in self.field.keys():
                 if key == key2:
                     continue
-                if distance_segment_point(robotData.position, self.field[key][0], self.field[key2][0]) < 0.0779 + 0.025:
+                if distance_segment_point_no_end(robotData.position, self.field[key][0], self.field[key2][0]) < 0.0779 + 0.025:
                     cont_main_loop = True
+                    intersect = True
                     break
             if cont_main_loop:
                 cont_main_loop = False
