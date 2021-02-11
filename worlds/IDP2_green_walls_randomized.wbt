@@ -18,8 +18,8 @@ WorldInfo {
   ]
 }
 Viewpoint {
-  orientation -0.459944621262837 -0.7555396154877643 -0.46648776489848776 1.85199752618632
-  position -3.1736973028290913 6.370731995073507 0.05432058315271093
+  orientation -0.5741325145907885 -0.5830198616832996 -0.5748562399178111 2.0931479690445682
+  position 0 7 0
 }
 TexturedBackground {
 }
@@ -161,7 +161,7 @@ DEF WALL_1 Solid {
   children [
     DEF WALL_SHAPE Shape {
       appearance PBRAppearance {
-        baseColor 0.12549 0.368627 0.729412
+        baseColor 0 0.333333 0
         roughness 1
         metalness 0
       }
@@ -198,19 +198,20 @@ DEF WALL_4 Solid {
   name "solid(3)"
   boundingObject USE WALL_SHAPE
 }
-DEF BLUE_ROBOT TwoWheelRobot {
-  translation 1 0.04 -1
+DEF BLUE_ROBOT RealRobot {
+  translation 1 0.08 -1
   colour 0 0 1
   name "blue"
   controller "<extern>"
-  emitChannel 0
-  receiveChannel 1
 }
-DEF RED_ROBOT TwoWheelRobot {
-  translation 1 0.05 1
+DEF RED_ROBOT RealRobot {
+  translation 1 0.08 1
   rotation 0 1 0 3.14
   name "red"
-  controller ""
-  emitChannel 1
-  receiveChannel 0
+  controller "<extern>"
+}
+Robot {
+  supervisor TRUE
+  name "supervisor"
+  controller "<extern>"
 }

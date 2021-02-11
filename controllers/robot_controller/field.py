@@ -160,7 +160,7 @@ class Field:
             for key2 in self.field.keys():
                 if key == key2:
                     continue
-                if distance_segment_point_no_end(robotData.position, self.field[key][0], self.field[key2][0]) < 0.0779 + 0.025:
+                if distance_segment_point_no_end(robotData.position, self.field[key][0], self.field[key2][0]) < 0.09 + 0.025:
                     cont_main_loop = True
                     intersect = True
                     break

@@ -41,7 +41,7 @@ def process_radio_signals():
         elif signal == 'DELETE':
             field.parse_deletions(data)
         elif signal == 'END':
-            print('ended')
+            print('Program END')
             robot.stop_motors()
             waitingForTarget = True
             stateMachine.exit()
@@ -51,7 +51,7 @@ def process_radio_signals():
             robot.robotData.targetBlock = int(data)
             block_pos = field.get_block_pos(robot.robotData.targetBlock)
             stateMachine.queue((LogicCommand.TRAVEL,
-                                block_pos - 0.17 * normalize(block_pos - robot.robotData.position)))
+                                block_pos - 0.15 * normalize(block_pos - robot.robotData.position)))
             stateMachine.queue((LogicCommand.COLOR,))
         elif signal == 'SEARCH':
             waitingForTarget = False

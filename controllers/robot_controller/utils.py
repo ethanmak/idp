@@ -33,3 +33,18 @@ def distance_segment_point_no_end(p1, p2, p3):
     if np.isclose(dist, np.linalg.norm(p3 - p2)) or np.isclose(dist, np.linalg.norm(p3 - p1)):
         return 1000
     return dist
+
+def line_segments_intersect(p1, p2, p3, p4):
+    def perp(a):
+        b = np.empty_like(a)
+        b[0] = -a[1]
+        b[1] = a[0]
+        return b
+    da = p2 - p1
+    db = p4 - p3
+    dp = p1 - p3
+    dap = perp(da)
+    denom = np.dot(dap, db)
+    num = np.dot(dap, dp)
+    point = (num / denom.astype(float)) * db + p3
+    return point

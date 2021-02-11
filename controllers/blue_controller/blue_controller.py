@@ -74,7 +74,7 @@ def set_new_targets():
         if robot.robotData.targetBlock >= 0:
             block_pos = field.get_block_pos(robot.robotData.targetBlock)
             block_color = field.get_block_color(robot.robotData.targetBlock)
-            target = block_pos - 0.17 * normalize(block_pos - robot.robotData.position)
+            target = block_pos - 0.15 * normalize(block_pos - robot.robotData.position)
             stateMachine.queue((LogicCommand.TRAVEL, target))
             if block_color == Color.UNKNOWN:
                 stateMachine.queue((LogicCommand.COLOR,))
@@ -82,13 +82,16 @@ def set_new_targets():
                 stateMachine.queue((LogicCommand.CAPTURE,))
                 stateMachine.queue((LogicCommand.TRAVEL_BACK,))
                 stateMachine.queue((LogicCommand.DEPOSIT,))
+            end = False
         else:
             search_position = field.allocate_search(robot.robotData)
             if search_position is None:
                 if not end:
                     stateMachine.queue((LogicCommand.TRAVEL_BACK,))
                     end = True
+                    print('Program END')
             else:
+                end = False
                 stateMachine.queue((LogicCommand.TRAVEL, search_position))
                 stateMachine.queue((LogicCommand.SEARCH, True))
 

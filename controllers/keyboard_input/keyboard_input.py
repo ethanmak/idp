@@ -20,6 +20,7 @@ def setup():
 
 if __name__ == '__main__':
     setup()
+    # robot.open_gate(True)
     while robot.step():
         robot.update()
         keys = pygame.key.get_pressed()

@@ -79,8 +79,8 @@ class Robot:
         self.radio.enable(self._timestep)
         self.compass.enable(self._timestep)
 
-        self._turnController = PIDController(0.02, 0.001, 0.05, 0, 2)
-        self._pathController = PIDController(0.01, 0, 0, 0, 3)
+        self._turnController = PIDController(0.02, 0.002, 0.05, 0, 2)
+        self._pathController = PIDController(0.01, 0.002, 0, 0, 3)
         self._pointController = PIDController(1 / 0.1, 0, 0, 0, 0)
 
         self.depositBox = None
@@ -163,7 +163,8 @@ class Robot:
             turnOutput = 0
         else:
             turnOutput = self._pathController.update(diff_ang)
-        motorPower = self._maxMotorVelocity * 0.8* clamp(self._pointController.update(-dist), -1, 1)
+        # turnOutput = 0
+        motorPower = self._maxMotorVelocity * 0.8 * clamp(self._pointController.update(-dist), -1, 1)
         turnOutput *= motorPower
         self.set_motor_velocity(motorPower - turnOutput, motorPower + turnOutput)
         return dist < threshold

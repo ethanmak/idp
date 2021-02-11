@@ -9,7 +9,7 @@ class FieldDisplay:
         pygame.display.set_caption(title)
         self.blueDeposit = None
         self.redDeposit = None
-        self.botSize = resolution * 0.12 / 2.4
+        self.botSize = resolution * 0.102 / 2.4
         self.blockSize = resolution * 0.05 / 2.4
 
     def _draw_field(self, field):
