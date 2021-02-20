@@ -198,7 +198,7 @@ class RobotStateMachine:
 
         dir = degree_to_vector(self.robot.robotData.yaw)
         start = self.robot.robotData.position + 0.064 * dir
-        robot_end = start + dir * robot_search_radius
+        robot_end = start + dir * robot_search_radius * 1.2
         block_end = start + dir * 0.08
 
         left_dist = Field.distance_to_wall(self.robot.robotData.position, self.robot.robotData.yaw - 90)

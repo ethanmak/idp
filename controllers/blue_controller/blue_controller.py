@@ -30,7 +30,7 @@ def setup():
 
     stateMachine = RobotStateMachine(robot, redRobotData, field)
 
-    fieldDisplay = FieldDisplay(resolution=800, title='Blue Robot Field')
+    fieldDisplay = FieldDisplay(resolution=400, title='Blue Robot Field')
 
 
 def process_radio_signals():
