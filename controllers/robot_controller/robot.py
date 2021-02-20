@@ -73,7 +73,7 @@ class RobotData:
     This robot handles all constant and updatable attributes of a robot and meshes that for communication
     """
 
-    def __init__(self, position: np.float = np.array([0, 0]), color: Color = Color.UNKNOWN):
+    def __init__(self, position: np.ndarray = np.array([0, 0]), color: Color = Color.UNKNOWN):
         """
         Initializer
         :param position: Initial position of robot
@@ -99,7 +99,7 @@ class RobotData:
     def __str__(self):
         return 'Pos: (' + ' '.join(map(str, self.position)) + ') Rot: ' + str(self.yaw) + ' Angular Vel: ' + str(self.angularVelocity)
 
-    def parse(self, data) -> None:
+    def parse(self, data: str) -> None:
         """
         Updates variables based on repr string
 
@@ -194,7 +194,7 @@ class Robot:
         """
         return self._robot.getTime()
 
-    def set_motor_velocity(self, left_vel, right_vel) -> None:
+    def set_motor_velocity(self, left_vel: float, right_vel: float) -> None:
         """
         Sets the motor velocity of both motors
 
@@ -205,7 +205,7 @@ class Robot:
         self.leftMotor.setVelocity(clamp(left_vel, -self._maxMotorVelocity, self._maxMotorVelocity))
         self.rightMotor.setVelocity(clamp(right_vel, -self._maxMotorVelocity, self._maxMotorVelocity))
 
-    def _set_motor_position(self, left_pos, right_pos) -> None:
+    def _set_motor_position(self, left_pos: float, right_pos: float) -> None:
         """
         Sets the target motor position of both motors
 
@@ -280,7 +280,7 @@ class Robot:
         self.set_motor_velocity(turn_vel, -turn_vel)
         return abs(diff) < threshold
 
-    def is_moving(self, thresh=3e-3) -> bool:
+    def is_moving(self, thresh: float = 3e-3) -> bool:
         """
         Returns if robot is currently moving or turning
 
@@ -289,7 +289,7 @@ class Robot:
         """
         return np.linalg.norm(self.robotData.velocity) > thresh and self.robotData.angularVelocity > thresh
 
-    def move_to_target(self, target, threshold=0.02) -> bool:
+    def move_to_target(self, target: np.ndarray, threshold: float = 0.02) -> bool:
         """
         Moves robot to target point using PID heading correction and power control
 

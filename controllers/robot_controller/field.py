@@ -2,6 +2,9 @@ import enum
 from .utils import *
 
 class Color(enum.Enum):
+    """
+    This enum holds the color definitions that can appear on the field, and can determine them based on rgb values
+    """
     RED = (255, 0, 0)
     BLUE = (0, 0, 255)
     GREEN = (0, 90, 0)
