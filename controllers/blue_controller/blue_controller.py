@@ -45,7 +45,7 @@ def process_radio_signals():
         elif signal == 'COLOR':
             field.parse_color_changes(data)
         elif signal == 'FIELD':
-            field.parse(data, use_id=False, mark_changes=True, threshold=0.05 * 1.5)
+            field.parse_additions(data, use_id=False, mark_changes=True, threshold=0.05 * 1.5)
         elif signal == 'COLOR':
             field.parse_color_changes(data)
         elif signal == 'DELETE':

@@ -37,14 +37,14 @@ def process_radio_signals():
         if signal == 'UPDATE':
             blueRobotData.parse(data)
         if signal == 'FIELD':
-            field.parse(data, use_id=True)
+            field.parse_additions(data, use_id=True)
         elif signal == 'DELETE':
             field.parse_deletions(data)
         elif signal == 'END':
             print('Program END')
             robot.stop_motors()
             waitingForTarget = True
-            stateMachine.exit()
+            stateMachine.reset()
             stateMachine.queue((LogicCommand.TRAVEL_BACK,))
         elif signal == 'TARGET':
             waitingForTarget = False

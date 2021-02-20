@@ -24,16 +24,79 @@ class RobotStateMachine:
         self.prev_time = 0
         self.data = []
         
-    def movement_queue(self, val):
+    def movement_queue(self, val: tuple) -> None:
+        """
+        Appends a RobotCommand in the form of (RobotCommand, Parameter if applicable) to end of queue
+
+        :param val: Command to append to end of movementQueue
+        :return: None
+        """
         self.movementQueue.append(val)
         
-    def _movement_stack(self, val):
+    def _movement_stack(self, val: tuple) -> None:
+        """
+        Appends a RobotCommand in the form of (RobotCommand, Parameter if applicable) to start of queue
+
+        :param val: Command to append to start of movementQueue
+        :return: None
+        """
         self.movementQueue.appendleft(val)
 
-    def queue(self, val):
+    def queue(self, val: tuple) -> None:
+        """
+        Appends a LogicCommand in the form of (LogicCommand, Parameter if applicable) to end of queue
+
+        :param val: Command to append to end of logicQueue
+        :return: None
+        """
         self.logicQueue.put(val)
 
-    def update_movement(self):
+    def timed_out(self):
+        """
+        Return whether last movement command timed out or not
+
+        :return: True if timed out, False otherwise
+        """
+        timed = self.robot.get_simulation_time() - self.prev_time > 12
+        if timed:
+            print('Timed Out')
+        return timed
+
+    def reset_movement_state(self) -> None:
+        """
+        Resets currentMovementState to dormant value (None)
+
+        :return: None
+        """
+        self.currentMovementState = None
+
+    def movement_command_empty(self):
+        """
+        Returns whether all movement commands have been processed
+
+        :return: True if totally processed, False otherwise
+        """
+        return len(self.movementQueue) <= 0 and self.currentMovementState is None
+
+    def reset(self) -> None:
+        """
+        Clears queue of all commands and resets current states
+
+        :return: None
+        """
+        self.currentLogicState = None
+        self.currentMovementState = None
+        self.movementQueue.clear()
+        while not self.logicQueue.empty():
+            self.logicQueue.get()
+
+    def update_movement(self) -> None:
+        """
+        Updates robot devices, motor velocities, and field representation based on currentMovementCommand, and queues a new one if current one has finished
+        Refer to command.RobotCommand for information on what each command does
+
+        :return: None
+        """
         if self.currentMovementState is None and len(self.movementQueue) > 0:
             command = self.movementQueue.popleft()
             self.currentMovementState = command[0]
@@ -121,20 +184,14 @@ class RobotStateMachine:
             if self.robot.robotData.targetBlock == self.target:
                 self.robot.robotData.targetBlock = -1
             self.reset_movement_state()
-
-    def timed_out(self):
-        timed = self.robot.get_simulation_time() - self.prev_time > 12
-        if timed:
-            print('Timed Out')
-        return timed
-
-    def reset_movement_state(self):
-        self.currentMovementState = None
-
-    def movement_command_empty(self):
-        return len(self.movementQueue) <= 0 and self.currentMovementState is None
     
     def update_logic(self):
+        """
+        Queues RobotCommands into movementQueue when current LogicCommand has finished its task
+        Refer to command.LogicCommand for information about what each command does
+
+        :return: None
+        """
         target = None
         state = None
         if self.movement_command_empty():
@@ -192,7 +249,18 @@ class RobotStateMachine:
         elif state == LogicCommand.DELAY:
             self.movement_queue((RobotCommand.DELAY, target))
     
-    def check_failsafes(self, give_way=False):
+    def check_failsafes(self, give_way: bool = False) -> None:
+        """
+        Dynamically checks for possible issues ie. collisions and pauses current RobotCommand to enact evasive maneuvers
+
+        Currently implemented failsafes:
+        Impending collision with block
+        Impending collision with other robot
+        Stalemates (where the robots stop to avoid collision but remain still waiting for the other to pass)
+
+        :param give_way: Whether to move out of path if in stalemate (Default is False)
+        :return: None
+        """
         block_search_radius = 0.071
         robot_search_radius = 0.051 * 1.5
 
@@ -258,11 +326,3 @@ class RobotStateMachine:
                 self._movement_stack((RobotCommand.BACKWARD, 0.5))
                 self.reset_movement_state()
                 return
-
-
-    def exit(self):
-        self.currentLogicState = None
-        self.currentMovementState = None
-        self.movementQueue.clear()
-        while not self.logicQueue.empty():
-            self.logicQueue.get()

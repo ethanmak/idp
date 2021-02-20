@@ -110,11 +110,12 @@ class Field:
 
     def add_block(self, pos: np.ndarray, color: Color = Color.UNKNOWN, use_field: bool = True) -> None:
         """
+        Adds block to field representation and logs for next call to get_additions
 
-        :param pos:
-        :param color:
-        :param use_field:
-        :return:
+        :param pos: Position of block
+        :param color: Color of block (Default is Color.UNKNOWN)
+        :param use_field: Whether to add this to the field representation (Default is True)
+        :return: None
         """
         if use_field:
             self.field[self.counter] = [pos, color]
@@ -123,20 +124,51 @@ class Field:
         self.counter += 1
 
     def get_block_pos(self, blockID: int) -> np.ndarray:
+        """
+        Returns position of block
+
+        :param blockID: Block ID of block to look up
+        :return: Position of block
+        """
         return self.field[blockID][0]
 
     def get_block_color(self, blockID: int) -> Color:
+        """
+        Returns color of block
+
+        :param blockID: Block ID of block to look up
+        :return: Color of block
+        """
         return self.field[blockID][1]
 
     def set_block_color(self, blockID: int, color: Color) -> None:
+        """
+        Sets the block color and logs for next call to get_color_changes
+
+        :param blockID: Block ID of block to change color
+        :param color: Color of block
+        :return: None
+        """
         self.field[blockID][1] = color
         self.color_changes[blockID] = color
 
     def remove_block(self, blockID: int) -> None:
+        """
+        Removes block from field representation and logs for next call to get_deletions
+
+        :param blockID: Block ID to remove
+        :return: None
+        """
         del self.field[blockID]
         self.deletions.append(blockID)
 
     def get_additions(self, use_id: bool = True) -> str:
+        """
+        Returns additions from last call to get_additions to this call in a parseable string by parse_additions
+
+        :param use_id: Whether to take into account the block IDs assigned automatically, or assign dummy IDs (True by default)
+        :return: Parseable string with additions from last call to get_additions to this call
+        """
         s = ''
         for i in self.additions:
             if use_id:
@@ -160,7 +192,7 @@ class Field:
         self.deletions.clear()
         return res
 
-    def parse(self, radio_input: str, use_id: bool = True, mark_changes: bool = False, threshold: float = None) -> None:
+    def parse_additions(self, radio_input: str, use_id: bool = True, mark_changes: bool = False, threshold: float = None) -> None:
         radio_input = radio_input.split(' ')
         for i in range(0, len(radio_input), 4):
             if radio_input[i] == '':
