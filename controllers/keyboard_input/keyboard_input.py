@@ -1,4 +1,8 @@
-# blue controller (master controller)
+"""
+Keyboard Controller
+
+This controller is used for debugging and allows an easy method to control a robot using keyboard input. It also serves as a test for sensors.
+"""
 from robot_controller import *
 from robot_controller.display import FieldDisplay
 from robot_controller.field import Field
@@ -20,7 +24,6 @@ def setup():
 
 if __name__ == '__main__':
     setup()
-    # robot.open_gate(True)
     while robot.step():
         robot.update()
         keys = pygame.key.get_pressed()

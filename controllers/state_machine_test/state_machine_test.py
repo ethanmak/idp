@@ -1,4 +1,8 @@
-# blue controller (master controller)
+"""
+State Machine Test
+
+A barebones controller to allow the unit testing of LogicCommands and RobotCommands
+"""
 from robot_controller import *
 from robot_controller.logic import RobotStateMachine
 from robot_controller.display import FieldDisplay
