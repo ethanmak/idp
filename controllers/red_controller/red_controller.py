@@ -1,7 +1,10 @@
-#red controller (slave controller)
+"""
+Blue Controller (Follower controller)
+
+This controller is the main controller executing code on the robot. It interacts with the robot from a very high level, leaving lower level routines to RobotStateMachine
+"""
 from robot_controller import *
 from robot_controller.logic import RobotStateMachine
-from robot_controller.display import FieldDisplay
 from robot_controller.field import Field
 
 robot = None  # type: Robot
@@ -16,6 +19,11 @@ stateMachine = None  # type: RobotStateMachine
 waitingForTarget = False
 
 def setup():
+    """
+    This sets up the simulation to run
+
+    :return: None
+    """
     global robot, stateMachine
     robot = Robot(controller.Robot(), redRobotData)
     robot.init_motor_velocity_control()
@@ -26,6 +34,19 @@ def setup():
     stateMachine = RobotStateMachine(robot, blueRobotData, field)
 
 def process_radio_signals():
+    """
+    Process the incoming signals from the radio and turn them into commands or updates
+
+    Possible signals are:
+    UPDATE: Update on the pose of the other robot
+    FIELD: Possible new additions of blocks to the field
+    DELETE: Deletions of blocks on field representation
+    END: The master has determined that the follower program should end
+    TARGET: The master has decided on a new target block for the follower
+    SEARCH: The master has decided on a new position to sweep for the follower
+
+    :return: None
+    """
     global waitingForTarget
     while robot.radio.has_next():
         string = robot.radio.next().split(':')
@@ -60,6 +81,17 @@ def process_radio_signals():
             stateMachine.queue((LogicCommand.SEARCH,))
 
 def broadcast_update():
+    """
+    Send an update about the RobotData and field representation to the other robot
+    Updates are:
+    UPDATE: Update on RobotData (robot pose)
+    FIELD: New additions to field representation
+    DELETE: New deletions to field representation
+    COLOR: New updates on colors of existing blocks
+    DONE: The follower robot has finished its tasks
+
+    :return: None
+    """
     global waitingForTarget
     robot.radio.send('UPDATE:' + repr(redRobotData))
     field_changes = field.get_additions(use_id=False)

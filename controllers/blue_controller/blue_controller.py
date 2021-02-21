@@ -1,4 +1,8 @@
-# blue controller (master controller)
+"""
+Blue Controller (Master controller)
+
+This controller is the main controller executing code on the robot. It interacts with the robot from a very high level, leaving lower level routines to RobotStateMachine
+"""
 from robot_controller import *
 from robot_controller.logic import RobotStateMachine
 from robot_controller.display import FieldDisplay
@@ -20,6 +24,11 @@ redEnd = False
 setRedTarget = False
 
 def setup():
+    """
+    This sets up the simulation and GUI to run
+
+    :return: None
+    """
     global robot, stateMachine, fieldDisplay
     robot = Robot(controller.Robot(), blueRobotData)
     robot.init_motor_velocity_control()
@@ -34,6 +43,18 @@ def setup():
 
 
 def process_radio_signals():
+    """
+    Process the incoming signals from the radio and turn them into commands or updates
+
+    Possible signals are:
+    UPDATE: Update on the pose of the other robot
+    COLOR: Updates on colors of a set of existing blocks
+    FIELD: Possible new additions of blocks to the field
+    DELETE: Deletions of blocks on field representation
+    DONE: The follower robot has finished its task
+
+    :return: None
+    """
     global setRedTarget
     while robot.radio.has_next():
         string = robot.radio.next().split(':')
@@ -46,8 +67,6 @@ def process_radio_signals():
             field.parse_color_changes(data)
         elif signal == 'FIELD':
             field.parse_additions(data, use_id=False, mark_changes=True, threshold=0.05 * 1.5)
-        elif signal == 'COLOR':
-            field.parse_color_changes(data)
         elif signal == 'DELETE':
             if redRobotData.targetBlock in field.parse_deletions(data):
                 print('deleted')
@@ -58,6 +77,15 @@ def process_radio_signals():
 
 
 def broadcast_update():
+    """
+    Send an update about the RobotData and field representation to the other robot
+    Updates are:
+    UPDATE: Update on RobotData (robot pose)
+    FIELD: New additions to field representation
+    DELETE: New deletions to field representation
+
+    :return: None
+    """
     robot.radio.send('UPDATE:' + repr(blueRobotData))
     field_changes = field.get_additions(use_id=True)
     if field_changes:
@@ -67,6 +95,11 @@ def broadcast_update():
         robot.radio.send('DELETE:' + deletions)
 
 def set_new_targets():
+    """
+    Defines new target blocks or search positions for both robots when they finish their tasks, and queues LogicCommands for master robot
+
+    :return: None
+    """
     global end, setRedTarget, redEnd
     #set blue target
     if stateMachine.currentLogicState is None:
