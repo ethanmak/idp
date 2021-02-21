@@ -4,25 +4,22 @@ from collections import deque
 from .robot import Robot
 from .command import *
 from .field import Field, Color
-import matplotlib.pyplot as plt
-
-_blueDeposit = np.array([])
-_redDeposit = np.array([])
-
 
 class RobotStateMachine:
+    """
+    This class handles the logical flow of the program as well as the direct movement subroutines of the robot through a state machine
+    """
     def __init__(self, robot: Robot, otherRobotData, field: Field = Field()):
-        self.logicQueue = queue.Queue()
-        self.movementQueue = deque()
-        self.currentMovementState = None
-        self.currentLogicState = None
-        self.target = None
-        self.prev_state = None
-        self.robot = robot
-        self.field = field
-        self.otherRobotData = otherRobotData
-        self.prev_time = 0
-        self.data = []
+        self.logicQueue = queue.Queue()  # queue of LogicCommands that are to be executed
+        self.movementQueue = deque()  # queue of RobotCommands to be executed
+        self.currentMovementState = None  # the current RobotCommand being executed
+        self.currentLogicState = None  # the current LogicCommand being executed
+        self.target = None  # the parameter of the RobotCommand, if applicable
+        self.prev_state = None  # the previous state, typically used as a placeholder for a value in RobotData
+        self.robot = robot  # the robot to interface with
+        self.field = field  # robot field representation
+        self.otherRobotData = otherRobotData  # other (non-target) RobotData
+        self.prev_time = 0  # start time of RobotCommand
         
     def movement_queue(self, val: tuple) -> None:
         """
@@ -144,28 +141,36 @@ class RobotStateMachine:
             print('Finished CLOSE command')
             self.reset_movement_state()
         elif self.currentMovementState == RobotCommand.SWEEP:
-            robot_dist = 0.01
+            """
+            In order to detect blocks, this robot employs a radial sweep line algorithm and checks the difference between the distanced detected and the ideal distance to the walls.
+            The distance to the wall is calculated using a trick with rays and line segment to avoid using another distance sensor.
+            
+            If the difference is large enough, a block position based on the heading and distance is calculated and logged in the field representation.
+            """
+            robot_dist = 0.01  # distance of robot from GPS sensor to distance sensor
             dist = self.robot.get_distance()
-            self.data.append(dist)
             rotation = self.robot.robotData.yaw
-            wall_dist = Field.distance_to_wall(self.robot.robotData.position, rotation) - robot_dist # accounting for robot depth
-            wall_dist = clamp(wall_dist, 0, 1.5)
+            wall_dist = Field.distance_to_wall(self.robot.robotData.position, rotation) - robot_dist  # accounting for robot depth
+            wall_dist = clamp(wall_dist, 0, 1.5)  # accounting for the max range of the distance sensor, 150cm
             if wall_dist - dist > 0.02 and 0.06 < dist < 1.5 and dist < wall_dist:
-                dist += 0.025 + robot_dist
-                rotation += 0.5
+                dist += 0.025 + robot_dist  # accounts for depth of block when calculating position
+                rotation += 0.5  # accounting for the fact that the robot detects the block likely on the first edge, so we must add 0.5 degrees to find the center of the block
                 angle = np.radians(rotation)
                 point = np.array([self.robot.robotData.position[0] + dist * np.cos(angle),
-                                  self.robot.robotData.position[1] + dist * np.sin(angle)])
-                # print('possible block at ', point)
+                                  self.robot.robotData.position[1] + dist * np.sin(angle)])  # center of block
                 if not self.field.contains_point(point, threshold=0.05 * 1.5) \
                         and Field.in_bounds(point) \
                         and np.linalg.norm(point - self.otherRobotData.position) > 0.2\
                         and not Field.in_deposit_boxes(point):
-                    print('found block at {} with dist {} at yaw {} and wall dist {}'.format(point, dist, self.robot.robotData.yaw, wall_dist))
+                    """
+                    Whether to add the block is determined by the following factors:
+                    If the block detected has already been detected
+                    If the block detected is in bounds
+                    If the block detected is far enough away from the other robot (could just be the other robot being detected)
+                    If the block is not in the depost boxes
+                    """
                     self.field.add_block(point, use_field=self.target)
             if self.robot.robotData.yaw < self.prev_state - 0.05 and self.prev_state - self.robot.robotData.yaw < 1:
-                # plt.plot(self.data)
-                # plt.show()
                 self.data.clear()
                 self.prev_state = None
                 print('Finished SWEEP command')
@@ -225,8 +230,6 @@ class RobotStateMachine:
             self.movement_queue((RobotCommand.OPEN,))
             self.movement_queue((RobotCommand.BACKWARD, 1.2))
             self.movement_queue((RobotCommand.CLOSE,))
-            # self.movement_queue((RobotCommand.FORWARD, 1.5))
-            # self.movement_queue((RobotCommand.BACKWARD, 1))
         elif state == LogicCommand.TRAVEL_BACK:
             diff = vector_degree(self.robot.depositBox - self.robot.robotData.position)
             self.movement_queue((RobotCommand.TURN, diff))
@@ -237,12 +240,15 @@ class RobotStateMachine:
             print('RGB is', value, 'with color', color.name)
             self.field.set_block_color(self.robot.robotData.targetBlock, color)
             if color == Color.GREEN or color == Color.UNKNOWN:
+                # remove blocks that have colors that are misdetected to account for possible misdetections in sweeping
                 self.field.remove_block(self.robot.robotData.targetBlock)
             if color == self.robot.robotData.color:
+                # if the block is the right color, then capture
                 self.queue((LogicCommand.CAPTURE,))
                 self.queue((LogicCommand.TRAVEL_BACK,))
                 self.queue((LogicCommand.DEPOSIT,))
             else:
+                # if the block is the wrong color, then sweep again
                 self.movement_queue((RobotCommand.BACKWARD, 1.2))
                 self.queue((LogicCommand.SEARCH,))
                 self.robot.robotData.targetBlock = -1
@@ -261,6 +267,12 @@ class RobotStateMachine:
         :param give_way: Whether to move out of path if in stalemate (Default is False)
         :return: None
         """
+
+        """
+        In order to detect issues, the robot employs virtual sensors, sensors that exist mathematically rather than physically.
+        More specifically, an imaginary line segment is drawn from the front of the robot (start) to an endpoint (block_end for block detection and robot_end for robot detection).
+        When a block or robot is too close to their respective line segment, the current RobotCommand is paused and evasive maneuvers are stacked to be run. 
+        """
         block_search_radius = 0.071
         robot_search_radius = 0.051 * 1.5
 
@@ -269,9 +281,11 @@ class RobotStateMachine:
         robot_end = start + dir * robot_search_radius * 1.2
         block_end = start + dir * 0.08
 
+        # left and right distances of robot to wall
         left_dist = Field.distance_to_wall(self.robot.robotData.position, self.robot.robotData.yaw - 90)
         right_dist = Field.distance_to_wall(self.robot.robotData.position, self.robot.robotData.yaw + 90)
 
+        # evasive maneuvers should only be taken when the robot is traveling or in a paused state in which it is waiting for the right of way
         if self.currentMovementState != RobotCommand.POINT and self.currentMovementState != RobotCommand.PAUSE:
             return
 
@@ -279,6 +293,7 @@ class RobotStateMachine:
         robot_dist = distance_segment_point(start, robot_end, self.otherRobotData.position)
         if robot_dist < robot_search_radius + robot_search_radius * 1.4:
             if abs(self.otherRobotData.yaw - self.robot.robotData.yaw - 180) < 60 and give_way:
+                # a possible stalemate is detected where the other robot is going for a head on collision
                 self._movement_stack((self.currentMovementState, self.target))
                 self._movement_stack((RobotCommand.TURN, self.robot.robotData.yaw))
                 self._movement_stack((RobotCommand.FORWARD, 2))
@@ -295,6 +310,7 @@ class RobotStateMachine:
                     self._movement_stack((RobotCommand.TURN, self.robot.robotData.yaw + 90))
                 self.reset_movement_state()
             elif self.currentMovementState != RobotCommand.PAUSE:
+                # if not head on then pause the robot to wait for other robot to pass
                 self._movement_stack((self.currentMovementState, self.target))
                 self._movement_stack((RobotCommand.PAUSE,))
                 self.reset_movement_state()
@@ -303,11 +319,14 @@ class RobotStateMachine:
 
         #check for distance to blocks
         if Field.in_deposit_boxes(self.robot.robotData.position, offset=0.05):
+            # if robot is in deposit boxes do not run block detection
             return
+
         for id in self.field.field:
             if id == self.robot.robotData.targetBlock:
                 continue
             if distance_segment_point_no_end(start, block_end, self.field.field[id][0]) < block_search_radius + 0.025:
+                # if found a possible block collision in front
                 self._movement_stack((self.currentMovementState, self.target))
                 self._movement_stack((RobotCommand.TURN, self.robot.robotData.yaw))
                 self._movement_stack((RobotCommand.FORWARD, 1.5))

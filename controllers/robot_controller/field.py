@@ -1,4 +1,5 @@
 import enum
+from typing import List
 
 from . import RobotData
 from .utils import *
@@ -28,16 +29,19 @@ class Field:
     """
     This class holds the field representation as well as functions to turn it to strings and manipulate the field
     """
+    # thickness of the wall
     thickness = 0.01
+    # a list of points of the four corners of the walls
     walls = [np.array([-1.2 + thickness, -1.2 + thickness]), np.array([-1.2 + thickness, 1.2 - thickness]), np.array([1.2 - thickness, 1.2 - thickness]), np.array([1.2 - thickness, -1.2 + thickness])]
 
     @staticmethod
     def distance_to_wall(origin: np.ndarray, rotation: float) -> float:
         """
-        Determines distance of a robot pose to wall by raytracing
+        Determines distance of a pose to wall by raytracing
 
+        This function draws a ray from the origin in the direction of its rotation. Then using the intersection between rays and line segments, it determines the distance
 
-        :param origin:
+        :param origin: Position of the pose to be analyzed
         :param rotation: Rotation of pose to be analyzed
         :return: Distance of pose ray trace to wall, -2 if no intersection
         """
@@ -100,13 +104,13 @@ class Field:
         """
         Initializer
         """
-        self.field = {}
-        self.additions = {}
-        self.color_changes = {}
-        self.counter = 0
-        self.unvisited = set()
-        self.search_spots = [np.array([0, -1]), np.array([0, 1]), np.array([0, 0])]
-        self.deletions = []
+        self.field = {}  # field representation of blocks
+        self.additions = {}  # log of additions for get_additions
+        self.color_changes = {}  # log of color changes for get_color_changes
+        self.counter = 0  # used for auto assigning IDs
+        self.unvisited = set()  # set of unvisited blocks
+        self.search_spots = [np.array([0, -1]), np.array([0, 1]), np.array([0, 0])]  # predefined search spots to cover field
+        self.deletions = []  # log of deletions for get_deletions
 
     def add_block(self, pos: np.ndarray, color: Color = Color.UNKNOWN, use_field: bool = True) -> None:
         """
@@ -164,10 +168,10 @@ class Field:
 
     def get_additions(self, use_id: bool = True) -> str:
         """
-        Returns additions from last call to get_additions to this call in a parseable string by parse_additions
+        Returns additions from last call to get_additions to this call in a parsable string by parse_additions
 
         :param use_id: Whether to take into account the block IDs assigned automatically, or assign dummy IDs (True by default)
-        :return: Parseable string with additions from last call to get_additions to this call
+        :return: Parsable string with additions from last call to get_additions to this call
         """
         s = ''
         for i in self.additions:
@@ -181,6 +185,11 @@ class Field:
         return s
 
     def get_color_changes(self) -> str:
+        """
+        Returns a string that contains color changes of blocks from last call to get_color_changes that can be parsed by parse_color_changes
+
+        :return: Parsable string with block IDs changed and colors associated
+        """
         s = ''
         for i in self.color_changes:
             s += str(i) + ' ' + self.color_changes[i].name + ' '
@@ -188,11 +197,25 @@ class Field:
         return s
 
     def get_deletions(self) -> str:
+        """
+        Returns a string that contains block deletions from last call to get_deletions that can be parsed by parse_deletions
+
+        :return: Parsable string
+        """
         res = ' '.join(map(str, self.deletions))
         self.deletions.clear()
         return res
 
     def parse_additions(self, radio_input: str, use_id: bool = True, mark_changes: bool = False, threshold: float = None) -> None:
+        """
+        Adds blocks to field representation as given by string returned by get_additions
+
+        :param radio_input: Parsable string given by get_additions
+        :param use_id: Whether to use block id supplied by string or generate new ones (used for master-follower protocol)
+        :param mark_changes: Whether to mark additions as new additions to be sent out in next call to get_additions
+        :param threshold: Distance to which block is considered covered by current field representation
+        :return: None
+        """
         radio_input = radio_input.split(' ')
         for i in range(0, len(radio_input), 4):
             if radio_input[i] == '':
@@ -212,10 +235,10 @@ class Field:
 
     def parse_color_changes(self, radio_input: str) -> None:
         """
+        Changes colors of blocks as given by parsable string returned by get_color_changes
 
-
-        :param radio_input:
-        :return:
+        :param radio_input: Parsable string from get_color_changes
+        :return: None
         """
         radio_input = radio_input.split(' ')
         for i in range(0, len(radio_input), 2):
@@ -223,12 +246,12 @@ class Field:
                 continue
             self.field[int(radio_input[i])][1] = Color[radio_input[i + 1]]
 
-    def parse_deletions(self, radio_input: str) -> list[int]:
+    def parse_deletions(self, radio_input: str) -> List[int]:
         """
+        Deletes blocks as given by parsable string returned by get_deletions
 
-
-        :param radio_input:
-        :return:
+        :param radio_input: Parsable string
+        :return: List of deleted block IDs
         """
         radio_input = list(map(int, radio_input.split(' ')))
         for i in radio_input:
@@ -237,11 +260,11 @@ class Field:
 
     def contains_point(self, pos: np.ndarray, threshold: float = 0.05) -> bool:
         """
+        Returns if a point is already covered by a block in the field representation
 
-
-        :param pos:
-        :param threshold:
-        :return:
+        :param pos: Coordinates of point
+        :param threshold: Distance under which point is considered covered
+        :return: True if covered, False otherwise
         """
         for block in self.field:
             if np.linalg.norm(self.field[block][0] - pos) <= threshold:
@@ -253,11 +276,15 @@ class Field:
 
     def allocate_block(self, robotData: RobotData, otherRobotData: RobotData) -> int:
         """
+        Allocates a block ID based on a set of criteria for the target robot
+        Criteria are as below:
+        Line of sight (the robot cannot travel to blocks where other blocks are blocking the path)
+        Distance to non-target robot (the robot should not travel to places where it may collide with the other robot)
+        Distance to target robot
 
-
-        :param robotData:
-        :param otherRobotData:
-        :return:
+        :param robotData: RobotData of target robot
+        :param otherRobotData: RobotData of other (non-target) robot
+        :return: Block ID allocated for robot
         """
         id = -1
         min_dist = 1000
@@ -287,10 +314,10 @@ class Field:
 
     def allocate_search(self, robotData: RobotData) -> np.ndarray:
         """
+        Allocates a position for the robot to search to, based on the current position of the robot, and removes it from list
 
-
-        :param robotData:
-        :return:
+        :param robotData: RobotData of target robot
+        :return: The point to search from, None if there are none left
         """
         if len(self.search_spots) <= 0:
             return None
